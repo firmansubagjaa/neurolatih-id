@@ -50,6 +50,66 @@ const App: React.FC = () => {
     type: 'info'
   });
 
+  
+  // --- DYNAMIC TITLE BAR LOGIC ---
+  useEffect(() => {
+    const baseTitle = "NeuroLatih 8-BIT";
+    let intervalId: any;
+
+    const getGameTitle = (mode: GameMode): string => {
+      switch (mode) {
+        case GameMode.MEMORY: return "MEMORI POLA";
+        case GameMode.SEQUENCE: return "DERET LOGIKA";
+        case GameMode.PROBLEM: return "TEKA-TEKI";
+        case GameMode.WORD: return "ASOSIASI KATA";
+        case GameMode.N_BACK: return "N-BACK MEMORY";
+        case GameMode.COLOR_MATCH: return "FOKUS STROOP";
+        case GameMode.MATH_RUSH: return "MATH RUSH";
+        case GameMode.ANAGRAM: return "ANAGRAM";
+        case GameMode.VISUAL_SEARCH: return "MATA ELANG";
+        case GameMode.NAVIGATION: return "NAVIGASI";
+        case GameMode.TASK_SWITCH: return "SWITCH";
+        default: return "GAME";
+      }
+    };
+
+    const updateTitle = () => {
+      clearInterval(intervalId);
+
+      if (document.hidden) {
+         document.title = "Jgn Lupa Latihan! 🧠";
+         return;
+      }
+
+      if (gameMode === GameMode.WELCOME) {
+        let blink = true;
+        intervalId = setInterval(() => {
+          document.title = blink ? `${baseTitle}_` : baseTitle;
+          blink = !blink;
+        }, 1000);
+      } else if (gameMode === GameMode.MENU) {
+         document.title = `[ MENU ] ${baseTitle}`;
+      } else if (gameMode === GameMode.RESULT) {
+         document.title = `[ SKOR ] ${baseTitle}`;
+      } else {
+        const modeName = getGameTitle(gameMode);
+        document.title = `[ ${modeName} ] Playing...`;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+       updateTitle();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    updateTitle();
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [gameMode]);
+
   useEffect(() => {
     const currentUser = getCurrentUser();
     if (currentUser) {
