@@ -50,7 +50,6 @@ const App: React.FC = () => {
     type: 'info'
   });
 
-  
   // --- DYNAMIC TITLE BAR LOGIC ---
   useEffect(() => {
     const baseTitle = "NeuroLatih 8-BIT";
@@ -58,18 +57,18 @@ const App: React.FC = () => {
 
     const getGameTitle = (mode: GameMode): string => {
       switch (mode) {
-        case GameMode.MEMORY: return "MEMORI POLA";
-        case GameMode.SEQUENCE: return "DERET LOGIKA";
-        case GameMode.PROBLEM: return "TEKA-TEKI";
-        case GameMode.WORD: return "ASOSIASI KATA";
-        case GameMode.N_BACK: return "N-BACK MEMORY";
-        case GameMode.COLOR_MATCH: return "FOKUS STROOP";
-        case GameMode.MATH_RUSH: return "MATH RUSH";
-        case GameMode.ANAGRAM: return "ANAGRAM";
-        case GameMode.VISUAL_SEARCH: return "MATA ELANG";
-        case GameMode.NAVIGATION: return "NAVIGASI";
-        case GameMode.TASK_SWITCH: return "SWITCH";
-        default: return "GAME";
+        case GameMode.MEMORY: return "👾 Memori Pola";
+        case GameMode.SEQUENCE: return "🔢 Deret Logika";
+        case GameMode.PROBLEM: return "💡 Teka-Teki";
+        case GameMode.WORD: return "📚 Asosiasi Kata";
+        case GameMode.N_BACK: return "🧠 N-Back Memory";
+        case GameMode.COLOR_MATCH: return "👁️ Fokus Stroop";
+        case GameMode.MATH_RUSH: return "➕ Math Rush";
+        case GameMode.ANAGRAM: return "🔡 Anagram";
+        case GameMode.VISUAL_SEARCH: return "🔍 Mata Elang";
+        case GameMode.NAVIGATION: return "🧭 Navigasi";
+        case GameMode.TASK_SWITCH: return "🔀 Quantum Switch";
+        default: return "Game";
       }
     };
 
@@ -84,16 +83,16 @@ const App: React.FC = () => {
       if (gameMode === GameMode.WELCOME) {
         let blink = true;
         intervalId = setInterval(() => {
-          document.title = blink ? `${baseTitle}_` : baseTitle;
+          document.title = blink ? `${baseTitle} | Asah Otak_` : `${baseTitle} | Tes IQ`;
           blink = !blink;
         }, 1000);
       } else if (gameMode === GameMode.MENU) {
-         document.title = `[ MENU ] ${baseTitle}`;
+         document.title = `[ MENU ] Pilih Tantangan | ${baseTitle}`;
       } else if (gameMode === GameMode.RESULT) {
-         document.title = `[ SKOR ] ${baseTitle}`;
+         document.title = `[ HASIL ] Skor Latihan | ${baseTitle}`;
       } else {
         const modeName = getGameTitle(gameMode);
-        document.title = `[ ${modeName} ] Playing...`;
+        document.title = `${modeName} | ${baseTitle}`;
       }
     };
 
@@ -129,44 +128,27 @@ const App: React.FC = () => {
       startMusic('MENU');
     }
     return () => {
-      if (gameMode === GameMode.WELCOME || gameMode === GameMode.MENU) {
-        stopMusic();
-      }
+      // Don't stop music here, let the game component handle it or transition
     };
   }, [gameMode]);
 
-  const showToast = (message: string, type: 'info' | 'success' | 'warning' = 'info') => {
-    setToast({ visible: true, message, type });
-  };
-
-  const handlePracticeToggle = (val: boolean) => {
-    setIsPracticeMode(val);
-    if (val) {
-        showToast("MODE LATIHAN AKTIF: Nyawa tak terbatas, tanpa timer ketat.", 'success');
-    } else {
-        showToast("MODE KOMPETITIF AKTIF: Waktu berjalan, skor dicatat!", 'warning');
-    }
-  };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    setIsScrolled(scrollTop > 10);
-  };
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogin = async () => {
-    playSound('click');
     setIsAuthLoading(true);
-    try {
-      const loggedUser = await loginWithGoogle();
-      setUser(loggedUser);
-      setGameMode(GameMode.MENU);
-      playSound('correct');
-      showToast("Login Berhasil. Selamat datang kembali.", 'success');
-    } catch (error) {
-      console.error("Login failed", error);
-    } finally {
-      setIsAuthLoading(false);
-    }
+    playSound('click');
+    const user = await loginWithGoogle();
+    setUser(user);
+    setIsAuthLoading(false);
+    setGameMode(GameMode.MENU);
+    setToast({ visible: true, message: `Login Berhasil: ${user.name}`, type: 'success' });
   };
 
   const handleLogout = async () => {
@@ -174,327 +156,318 @@ const App: React.FC = () => {
     await logout();
     setUser(null);
     setGameMode(GameMode.WELCOME);
+    setToast({ visible: true, message: "Anda telah logout.", type: 'info' });
   };
 
-  const handleGameCardClick = (mode: GameMode) => {
+  const handleGameSelect = (mode: GameMode) => {
     playSound('click');
     setPendingGameMode(mode);
   };
 
-  const handleDifficultySelect = (selectedDifficulty: Difficulty) => {
-    setDifficulty(selectedDifficulty);
+  const handleDifficultySelect = (diff: Difficulty) => {
+    setDifficulty(diff);
+    setPendingGameMode(null);
     if (pendingGameMode) {
-        stopMusic();
-        setIsQuickMode(false);
-        setGameMode(pendingGameMode);
-        setPendingGameMode(null);
+      setGameMode(pendingGameMode);
     }
-  };
-
-  const handleStartQuickGame = () => {
-    stopMusic();
-    let targetDifficulty = Difficulty.INTERMEDIATE;
-    if (lastResult) {
-      if (lastResult.accuracy >= 80) targetDifficulty = Difficulty.ADVANCED;
-      else if (lastResult.accuracy < 40) targetDifficulty = Difficulty.BEGINNER;
-    }
-    setDifficulty(targetDifficulty);
-
-    const modes = [
-        GameMode.MEMORY, GameMode.SEQUENCE, GameMode.PROBLEM, GameMode.WORD, 
-        GameMode.N_BACK, GameMode.COLOR_MATCH, GameMode.MATH_RUSH, 
-        GameMode.ANAGRAM, GameMode.VISUAL_SEARCH, GameMode.NAVIGATION, GameMode.TASK_SWITCH
-    ];
-    const randomMode = modes[Math.floor(Math.random() * modes.length)];
-    
-    setIsQuickMode(true);
-    setIsPracticeMode(false);
-    setGameMode(randomMode);
-    showToast("Quick Play dimulai! Mode acak dipilih.", 'info');
   };
 
   const handleEndGame = async (result: GameResult) => {
-    const fullResult = { ...result, isPractice: isPracticeMode };
-    setLastResult(fullResult);
+    setLastResult(result);
     setGameMode(GameMode.RESULT);
     
-    if (user && !isPracticeMode) {
-      saveGameResult(user.id, fullResult);
+    // Save locally
+    if (user && !result.isPractice) {
+        saveGameResult(user.id, result);
     }
 
-    if (result.accuracy >= 70) playSound('win');
-    else playSound('wrong');
-    
     setIsFeedbackLoading(true);
-    setAiFeedback('');
     try {
-        const feedback = await generateGameFeedback(fullResult);
-        setAiFeedback(feedback);
-    } catch (e) {
-        setAiFeedback("Analisis selesai.");
+      const feedback = await generateGameFeedback(result);
+      setAiFeedback(feedback);
+    } catch (error) {
+      console.error(error);
+      setAiFeedback("Koneksi Neural Terputus. Tidak dapat menganalisis data.");
     } finally {
-        setIsFeedbackLoading(false);
+      setIsFeedbackLoading(false);
     }
   };
 
-  const resetGame = () => {
-    setGameMode(GameMode.MENU);
-    setLastResult(null);
-    setIsQuickMode(false);
-    setAiFeedback('');
-    playSound('click');
-  };
+  const renderContent = () => {
+    switch (gameMode) {
+      case GameMode.WELCOME:
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[80vh] text-center animate-fade-in px-4">
+            <div className="mb-8 relative group cursor-default">
+               <div className="absolute -inset-1 bg-gradient-to-r from-retro-green via-retro-cyan to-retro-pink opacity-75 blur group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+               <div className="relative bg-black border-4 border-white p-6 md:p-8 transform transition-transform group-hover:scale-105">
+                 <h1 className="text-4xl md:text-7xl font-pixel text-retro-green mb-2 text-shadow-glow">NEUROLATIH</h1>
+                 <p className="text-sm md:text-xl font-mono text-retro-cyan tracking-[0.5em] animate-pulse">8-BIT EDITION</p>
+               </div>
+            </div>
+            
+            <p className="max-w-md text-slate-300 mb-8 font-mono text-sm md:text-base leading-relaxed bg-black/50 p-4 rounded border border-white/10">
+              <span className="text-retro-green">{">"}</span> {welcomeMessage || "Inisialisasi sistem..."}<span className="animate-blink">_</span>
+            </p>
 
-  const handlePlayAgain = () => {
-    if (lastResult) {
-        playSound('click');
-        setGameMode(lastResult.gameMode);
-    }
-  };
-
-  const renderWelcome = () => (
-    <div className="flex flex-col items-center justify-center min-h-[90vh] w-full max-w-4xl mx-auto px-6 text-center relative z-10">
-      <div className="mb-6 p-3 border-4 border-retro-green bg-black shadow-[8px_8px_0px_0px_rgba(51,255,0,0.5)]">
-         <Brain className="w-16 h-16 md:w-20 md:h-20 text-retro-green animate-pulse mx-auto" />
-      </div>
-      
-      <h1 className="text-3xl md:text-5xl font-pixel text-white mb-4 leading-relaxed text-shadow-retro">
-        NeuroLatih<br/><span className="text-retro-green">8-BIT</span>
-      </h1>
-      
-      <div className="mb-8 w-full max-w-lg border-2 border-slate-700 bg-black p-3 font-mono text-retro-cyan text-sm md:text-base">
-         <div className="flex gap-2 mb-2 border-b border-slate-800 pb-2">
-            <span className="text-retro-pink">root@system:~$</span>
-            <span className="animate-pulse">_</span>
-         </div>
-         {welcomeMessage ? (
-           <p className="leading-tight typing-effect">"{welcomeMessage}"</p>
-         ) : (
-           <div className="h-6 w-32 bg-retro-green/20 animate-pulse mx-auto"></div>
-         )}
-      </div>
-
-      <div className="flex flex-col gap-3 w-full max-w-xs">
-        <button 
-          onClick={handleLogin}
-          disabled={isAuthLoading}
-          className="retro-btn border-2 md:border-4 border-white bg-blue-600 hover:bg-blue-500 text-white font-pixel py-3 px-6 shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] flex items-center justify-center gap-3 text-xs md:text-sm"
-        >
-           {isAuthLoading ? "MENGHUBUNGKAN..." : "MASUKKAN KOIN (LOGIN)"}
-        </button>
-      </div>
-    </div>
-  );
-
-  const BentoItem = ({ title, desc, icon, color, onClick, colSpan = "col-span-1", rowSpan = "row-span-1" }: any) => {
-    let borderClass = "border-white";
-    let textClass = "text-white";
-    
-    switch(color) {
-        case 'pink': borderClass = "border-retro-pink"; textClass = "text-retro-pink"; break;
-        case 'purple': borderClass = "border-purple-500"; textClass = "text-purple-400"; break;
-        case 'blue': borderClass = "border-retro-cyan"; textClass = "text-retro-cyan"; break;
-        case 'emerald': borderClass = "border-retro-green"; textClass = "text-retro-green"; break;
-        case 'indigo': borderClass = "border-indigo-400"; textClass = "text-indigo-300"; break;
-        case 'orange': borderClass = "border-retro-yellow"; textClass = "text-retro-yellow"; break;
-        case 'red': borderClass = "border-retro-red"; textClass = "text-retro-red"; break;
-    }
-
-    return (
-      <div 
-        onClick={onClick}
-        className={`${colSpan} ${rowSpan} cursor-pointer bg-black border-2 md:border-4 ${borderClass} p-3 md:p-4 flex flex-col justify-between transition-transform active:scale-95 hover:-translate-y-1 shadow-[4px_4px_0px_0px_rgba(50,50,50,0.5)] group min-h-[100px] md:min-h-[120px]`}
-      >
-          <div className="flex justify-between items-start">
-             <div className={`${textClass} group-hover:animate-bounce transform scale-90 md:scale-100 origin-top-left`}>{icon}</div>
-             <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-slate-600 group-hover:text-white" />
-          </div>
-          <div>
-              <h3 className={`font-pixel text-[8px] md:text-[10px] uppercase mb-0.5 md:mb-1 ${textClass}`}>{title}</h3>
-              <p className="font-mono text-[10px] md:text-xs text-slate-400 leading-tight tracking-tight">{desc}</p>
-          </div>
-      </div>
-    );
-  };
-
-  const renderMenu = () => (
-    <div className="w-full max-w-4xl mx-auto flex flex-col items-center px-3 md:px-4 pb-20">
-      
-      {/* Header */}
-      <header className={`w-full flex flex-col gap-3 py-3 mb-4 md:py-5 md:flex-row md:items-center md:justify-between sticky top-0 z-40 transition-all ${isScrolled ? 'bg-black/95 border-b-2 border-retro-green px-3 -mx-3 shadow-lg' : ''}`}>
-        
-        <div className="flex items-center justify-between w-full">
-             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-retro-green border-2 md:border-4 border-white flex items-center justify-center overflow-hidden">
-                   <img src={user?.avatarUrl} alt="Avatar" className="w-full h-full grayscale hover:grayscale-0" />
+            <Button onClick={handleLogin} isLoading={isAuthLoading} className="text-lg md:text-xl py-4 px-8 md:px-12 shadow-[0_0_20px_rgba(51,255,0,0.4)] animate-bounce-slow">
+              {isAuthLoading ? "MENGHUBUNGKAN..." : "MULAI LATIHAN"}
+            </Button>
+            
+            <div className="mt-12 grid grid-cols-3 gap-4 md:gap-8 text-center opacity-70">
+                <div>
+                    <Brain className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 text-retro-pink" />
+                    <p className="text-[10px] md:text-xs font-pixel text-retro-pink">MEMORI</p>
                 </div>
-                <div className="flex flex-col font-pixel">
-                   <h1 className="text-[10px] md:text-xs text-white uppercase">PEMAIN 1</h1>
-                   <span className="text-[10px] text-retro-green">{user?.name.split(' ')[0]}</span>
+                <div>
+                    <Zap className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 text-retro-yellow" />
+                    <p className="text-[10px] md:text-xs font-pixel text-retro-yellow">REFLEKS</p>
                 </div>
-             </div>
+                <div>
+                    <Network className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 text-retro-cyan" />
+                    <p className="text-[10px] md:text-xs font-pixel text-retro-cyan">LOGIKA</p>
+                </div>
+            </div>
+          </div>
+        );
 
-             <div className="flex items-center gap-2">
-                <Tooltip text="PENGATURAN" position="bottom">
-                  <button onClick={() => { setIsSettingsOpen(true); playSound('click'); }} className="p-1.5 md:p-2 border-2 border-slate-600 bg-black hover:bg-slate-800 text-slate-300">
-                    <Settings className="w-4 h-4 md:w-5 md:h-5" />
-                  </button>
-                </Tooltip>
-                
-                <Tooltip text="KELUAR" position="bottom">
-                  <button onClick={handleLogout} className="p-1.5 md:p-2 border-2 border-retro-red bg-black hover:bg-retro-red hover:text-white text-retro-red">
-                    <LogOut className="w-4 h-4 md:w-5 md:h-5" />
-                  </button>
-                </Tooltip>
-             </div>
-        </div>
+      case GameMode.MENU:
+        return (
+          <div className="w-full max-w-5xl mx-auto animate-fade-in pb-20">
+            <div className="text-center mb-8 md:mb-12 animate-fade-in-up">
+              <h1 className="text-4xl md:text-6xl font-pixel text-transparent bg-clip-text bg-gradient-to-b from-retro-green to-emerald-600 mb-4 filter drop-shadow-[0_0_10px_rgba(51,255,0,0.5)]">
+                NEUROLATIH
+                <span className="text-sm md:text-xl block text-retro-cyan mt-2 tracking-[0.5em] font-sans">8-BIT EDITION</span>
+              </h1>
+              
+              <div className="flex items-center justify-center gap-4 text-xs font-mono text-slate-400 bg-black/40 inline-block px-4 py-2 rounded-full border border-white/10">
+                 <span>STATUS: <span className="text-emerald-400">ONLINE</span></span>
+                 <span>|</span>
+                 <span>USER: <span className="text-retro-yellow uppercase">{user?.name}</span></span>
+              </div>
+            </div>
 
-        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-end">
-             <Toggle checked={isPracticeMode} onChange={handlePracticeToggle} label="LATIHAN" />
-        </div>
-      </header>
+            {/* Quick Stats & Toggles */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Stats Widget */}
+                <div className="lg:col-span-2">
+                   <Card className="h-full bg-slate-900/80 border-slate-700 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-30 transition-opacity">
+                         <Activity className="w-24 h-24 text-retro-green" />
+                      </div>
+                      {user && <WeeklyStats user={user} />}
+                   </Card>
+                </div>
 
-      {/* Grid - Adjusted for 11 Games */}
-      <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        
-        {/* Quick Start */}
-        <div 
-            onClick={handleStartQuickGame}
-            className="col-span-2 row-span-1 md:row-span-1 cursor-pointer bg-retro-yellow/10 border-2 md:border-4 border-retro-yellow p-4 md:p-6 flex items-center justify-between text-center hover:bg-retro-yellow/20 transition-all shadow-[4px_4px_0px_0px_rgba(250,255,0,0.5)] relative overflow-hidden group"
-        >
-             <div className="text-left">
-                <h2 className="font-pixel text-sm md:text-lg text-white mb-1">MAIN CEPAT</h2>
-                <p className="font-mono text-[10px] md:text-xs text-retro-yellow">TANTANGAN ACAK</p>
-             </div>
-             <Zap className="w-8 h-8 md:w-10 md:h-10 text-retro-yellow group-hover:scale-110 transition-transform" />
-             <div className="absolute top-0 left-0 w-full h-1 bg-retro-yellow animate-[glitch_2s_infinite]"></div>
-        </div>
-
-        {/* --- Memory & Focus --- */}
-        <BentoItem title="POLA" desc="MEMORI" icon={<Grid className="w-5 h-5" />} color="pink" onClick={() => handleGameCardClick(GameMode.MEMORY)} />
-        <BentoItem title="N-BACK" desc="MEMORI KERJA" icon={<BrainCircuit className="w-5 h-5" />} color="purple" onClick={() => handleGameCardClick(GameMode.N_BACK)} />
-        
-        {/* --- New Focus/Perception --- */}
-        <BentoItem title="MATA ELANG" desc="PENCARIAN" icon={<Scan className="w-5 h-5" />} color="emerald" onClick={() => handleGameCardClick(GameMode.VISUAL_SEARCH)} />
-        <BentoItem title="STROOP" desc="FOKUS" icon={<Eye className="w-5 h-5" />} color="blue" onClick={() => handleGameCardClick(GameMode.COLOR_MATCH)} />
-        
-        {/* --- Logic & Math --- */}
-        <BentoItem title="DERET" desc="LOGIKA" icon={<Network className="w-5 h-5" />} color="indigo" onClick={() => handleGameCardClick(GameMode.SEQUENCE)} />
-        {/* New Math Game */}
-        <BentoItem title="MATH RUSH" desc="HITUNG CEPAT" icon={<Calculator className="w-5 h-5" />} color="red" onClick={() => handleGameCardClick(GameMode.MATH_RUSH)} />
-        <BentoItem title="TEKA-TEKI" desc="PEMECAHAN MASALAH" icon={<Lightbulb className="w-5 h-5" />} color="indigo" colSpan="col-span-2" onClick={() => handleGameCardClick(GameMode.PROBLEM)} />
-
-        {/* --- Verbal & Spatial --- */}
-        <BentoItem title="ASOSIASI" desc="VERBAL" icon={<BookOpen className="w-5 h-5" />} color="orange" onClick={() => handleGameCardClick(GameMode.WORD)} />
-        <BentoItem title="ANAGRAM" desc="KATA SANDI" icon={<Type className="w-5 h-5" />} color="pink" onClick={() => handleGameCardClick(GameMode.ANAGRAM)} />
-        
-        {/* New Game */}
-        <BentoItem title="SWITCH" desc="MULTITASKING" icon={<Shuffle className="w-5 h-5" />} color="blue" onClick={() => handleGameCardClick(GameMode.TASK_SWITCH)} />
-        
-        <BentoItem title="NAVIGASI" desc="SPASIAL" icon={<Compass className="w-5 h-5" />} color="emerald" onClick={() => handleGameCardClick(GameMode.NAVIGATION)} />
-        
-        {/* Stats Panel */}
-        <div className="col-span-2 md:col-span-4 bg-black border-2 md:border-4 border-slate-700 p-3 md:p-4 relative">
-             <div className="absolute top-0 right-0 p-1 bg-slate-700 text-[8px] md:text-[10px] font-pixel text-white">MODUL_STATISTIK_V1.0</div>
-             {user ? <WeeklyStats user={user} /> : <div>MEMUAT...</div>}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderResult = () => {
-    if (!lastResult) return null;
-    const isWin = lastResult.accuracy >= 70;
-    
-    return (
-      <div className="w-full max-w-lg mx-auto pb-10 pt-4 px-4 flex flex-col items-center">
-        {isWin && <Confetti />}
-        
-        <div className="text-center mb-6 animate-fade-in-up">
-            <h2 className={`text-3xl md:text-5xl font-pixel mb-3 text-shadow-retro ${isWin ? 'text-retro-yellow' : 'text-retro-red'}`}>
-                {isWin ? 'SKOR TINGGI!' : 'GAME OVER'}
+                {/* Toggles */}
+                <Card className="flex flex-col justify-center gap-4 bg-slate-900/80 border-slate-700">
+                    <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-2">
+                        <Settings className="w-4 h-4 text-retro-cyan" />
+                        <span className="text-xs font-bold text-slate-300 uppercase">Konfigurasi Misi</span>
+                    </div>
+                    
+                    <Toggle 
+                        checked={isQuickMode} 
+                        onChange={setIsQuickMode} 
+                        label="⚡ Mode Cepat (Timer 2x Cepat)" 
+                    />
+                    <Toggle 
+                        checked={isPracticeMode} 
+                        onChange={setIsPracticeMode} 
+                        label="🛡️ Mode Latihan (No Fail)" 
+                    />
+                </Card>
+            </div>
+            
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2 border-l-4 border-retro-green pl-3">
+               <Grid className="w-5 h-5 text-retro-green" /> PILIH MODUL LATIHAN
             </h2>
-            <div className="inline-block border-2 border-white px-3 py-1 bg-black font-mono text-retro-cyan text-sm">
-                {lastResult.gameMode} // {lastResult.difficulty}
-            </div>
-        </div>
 
-        <div className="w-full bg-black border-2 md:border-4 border-white p-4 md:p-6 mb-6 shadow-[8px_8px_0px_0px_rgba(255,255,255,0.3)]">
-            <div className="flex justify-between items-end border-b-2 border-dashed border-slate-600 pb-4 mb-4">
-                <span className="font-pixel text-[10px] text-slate-400">AKURASI</span>
-                <span className={`font-mono text-3xl md:text-4xl ${lastResult.accuracy < 50 ? 'text-retro-red' : 'text-retro-green'}`}>
-                    {lastResult.accuracy.toFixed(0)}%
-                </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Game Cards */}
+              {[
+                { id: GameMode.MEMORY, name: "Memori Pola", desc: "Ingat urutan kotak yang menyala.", icon: <BrainCircuit className="w-8 h-8 text-pink-500" />, color: "border-pink-500 hover:bg-pink-900/20" },
+                { id: GameMode.SEQUENCE, name: "Deret Logika", desc: "Tebak angka selanjutnya.", icon: <Network className="w-8 h-8 text-emerald-500" />, color: "border-emerald-500 hover:bg-emerald-900/20" },
+                { id: GameMode.PROBLEM, name: "Teka-Teki", desc: "Pecahkan masalah logika lateral.", icon: <Lightbulb className="w-8 h-8 text-indigo-500" />, color: "border-indigo-500 hover:bg-indigo-900/20" },
+                { id: GameMode.WORD, name: "Asosiasi Kata", desc: "Temukan hubungan antar kata.", icon: <BookOpen className="w-8 h-8 text-orange-500" />, color: "border-orange-500 hover:bg-orange-900/20" },
+                { id: GameMode.N_BACK, name: "N-Back", desc: "Tes Working Memory tingkat lanjut.", icon: <RotateCcw className="w-8 h-8 text-purple-500" />, color: "border-purple-500 hover:bg-purple-900/20" },
+                { id: GameMode.COLOR_MATCH, name: "Fokus Stroop", desc: "Latih inhibisi dan fokus.", icon: <Eye className="w-8 h-8 text-blue-500" />, color: "border-blue-500 hover:bg-blue-900/20" },
+                { id: GameMode.MATH_RUSH, name: "Math Rush", desc: "Hitung cepat di bawah tekanan.", icon: <Calculator className="w-8 h-8 text-teal-500" />, color: "border-teal-500 hover:bg-teal-900/20" },
+                { id: GameMode.ANAGRAM, name: "Anagram", desc: "Susun kata yang teracak.", icon: <Type className="w-8 h-8 text-rose-500" />, color: "border-rose-500 hover:bg-rose-900/20" },
+                { id: GameMode.VISUAL_SEARCH, name: "Mata Elang", desc: "Temukan objek yang berbeda.", icon: <Scan className="w-8 h-8 text-lime-500" />, color: "border-lime-500 hover:bg-lime-900/20" },
+                { id: GameMode.NAVIGATION, name: "Navigasi", desc: "Latih orientasi spasial arah.", icon: <Compass className="w-8 h-8 text-amber-500" />, color: "border-amber-500 hover:bg-amber-900/20" },
+                { id: GameMode.TASK_SWITCH, name: "Switch", desc: "Uji fleksibilitas kognitif.", icon: <Shuffle className="w-8 h-8 text-cyan-500" />, color: "border-cyan-500 hover:bg-cyan-900/20" },
+              ].map((game) => (
+                <Card 
+                  key={game.id} 
+                  onClick={() => handleGameSelect(game.id)}
+                  className={`group cursor-pointer transition-all hover:scale-105 active:scale-95 ${game.color} border-l-4 bg-slate-900/50`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 bg-black rounded-lg border border-white/10 group-hover:border-white/30 transition-colors">
+                        {game.icon}
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-1 group-hover:text-retro-green transition-colors">{game.name}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-mono">{game.desc}</p>
+                </Card>
+              ))}
             </div>
-            <div className="flex justify-between items-end">
-                <span className="font-pixel text-[10px] text-slate-400">SKOR</span>
-                <span className="font-mono text-3xl md:text-4xl text-retro-yellow">{lastResult.score}</span>
+            
+            <div className="mt-12 text-center">
+               <button onClick={handleLogout} className="text-xs text-red-500 hover:text-red-400 hover:underline flex items-center justify-center gap-2 mx-auto">
+                 <LogOut className="w-3 h-3" /> LOGOUT SYSTEM
+               </button>
             </div>
-        </div>
+          </div>
+        );
 
-        <div className="w-full bg-slate-900 border-2 border-slate-700 p-4 mb-6 font-mono text-xs md:text-sm leading-relaxed text-slate-300">
-            <div className="flex items-center gap-2 mb-2 text-retro-green font-bold">
-                <Terminal className="w-4 h-4" />
-                <span>UMPAN_BALIK_AI:</span>
-            </div>
-            {isFeedbackLoading ? <NeuralLoader message="MENGANALISIS..." /> : <p className="typing-effect">{aiFeedback}</p>}
-        </div>
+      case GameMode.RESULT:
+        return (
+          <div className="w-full max-w-2xl mx-auto animate-fade-in-up">
+            <Card className="border-t-8 border-t-retro-green bg-slate-900">
+              <div className="text-center mb-8">
+                <Trophy className="w-20 h-20 text-retro-yellow mx-auto mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />
+                <h2 className="text-3xl font-pixel text-white mb-2">LATIHAN SELESAI</h2>
+                <div className="inline-block bg-slate-800 px-4 py-1 rounded-full border border-slate-700">
+                   <p className="text-xs font-mono text-slate-400">MODUL: {lastResult?.gameMode}</p>
+                </div>
+              </div>
 
-        <div className="flex flex-col w-full gap-3">
-            <Button onClick={handlePlayAgain} className="w-full py-3 bg-retro-green text-black hover:bg-white hover:text-black">
-                ULANGI LEVEL
-            </Button>
-            <Button onClick={resetGame} variant="secondary" className="w-full py-3">
-                MENU UTAMA
-            </Button>
-        </div>
-      </div>
-    );
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 text-center">
+                  <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Skor Akhir</p>
+                  <p className="text-4xl font-mono font-bold text-retro-green">{lastResult?.score}</p>
+                </div>
+                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 text-center">
+                  <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Akurasi</p>
+                  <p className={`text-4xl font-mono font-bold ${lastResult && lastResult.accuracy >= 80 ? 'text-retro-cyan' : 'text-retro-red'}`}>
+                    {lastResult?.accuracy.toFixed(0)}%
+                  </p>
+                </div>
+                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 text-center">
+                  <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Waktu</p>
+                  <p className="text-2xl font-mono font-bold text-white">{(lastResult?.duration || 0) / 1000}s</p>
+                </div>
+                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 text-center">
+                  <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Kesulitan</p>
+                  <p className="text-lg font-mono font-bold text-retro-pink uppercase">{lastResult?.difficulty}</p>
+                </div>
+              </div>
+
+              <div className="bg-black/50 p-6 rounded-lg border border-white/10 mb-8 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-retro-green"></div>
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-retro-green" /> ANALISIS AI
+                </h3>
+                {isFeedbackLoading ? (
+                  <NeuralLoader message="MENGANALISIS DATA SARAF..." />
+                ) : (
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <p className="font-mono text-slate-300 leading-relaxed typing-effect">
+                        {aiFeedback}
+                    </p>
+                    {lastResult?.mistakePatterns && lastResult.mistakePatterns.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-white/10">
+                            <p className="text-xs text-red-400 font-bold mb-2">POLA KESALAHAN TERDETEKSI:</p>
+                            <ul className="list-disc list-inside text-xs text-slate-400 space-y-1">
+                                {[...new Set(lastResult.mistakePatterns)].map((m, i) => (
+                                    <li key={i}>{m}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4">
+                <Button variant="secondary" onClick={() => setGameMode(GameMode.MENU)} className="flex-1">
+                  KEMBALI KE MENU
+                </Button>
+                <Button onClick={() => setGameMode(lastResult?.gameMode || GameMode.MENU)} className="flex-1">
+                  ULANGI MISI
+                </Button>
+              </div>
+            </Card>
+          </div>
+        );
+
+      default:
+        return (
+          <Suspense fallback={
+             <div className="flex h-[50vh] items-center justify-center">
+                <NeuralLoader message="MEMUAT MODUL GAME..." />
+             </div>
+          }>
+            <div className="animate-fade-in w-full flex justify-center">
+                {gameMode === GameMode.PROBLEM && <LogicGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.MEMORY && <MemoryGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.SEQUENCE && <SequenceGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.WORD && <WordGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.N_BACK && <NBackGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.COLOR_MATCH && <ColorMatchGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.MATH_RUSH && <MathRushGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.ANAGRAM && <AnagramGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.VISUAL_SEARCH && <VisualSearchGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.NAVIGATION && <NavigationGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+                {gameMode === GameMode.TASK_SWITCH && <TaskSwitchGame difficulty={difficulty} onEndGame={handleEndGame} onBack={() => setGameMode(GameMode.MENU)} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
+            </div>
+          </Suspense>
+        );
+    }
   };
 
   return (
-    <div className="min-h-screen bg-retro-dark text-retro-green selection:bg-retro-green selection:text-black font-mono overflow-x-hidden">
-        <NeuralBackground />
-        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-        <RetroToast 
-            isVisible={toast.visible} 
-            message={toast.message} 
-            type={toast.type} 
-            onClose={() => setToast(p => ({ ...p, visible: false }))} 
-        />
-        
-        {/* Difficulty Selection Modal */}
-        <DifficultyModal 
-            isOpen={!!pendingGameMode} 
-            onClose={() => setPendingGameMode(null)} 
-            onSelect={handleDifficultySelect} 
-        />
-
-        <div className="relative z-10 w-full min-h-screen flex flex-col" onScroll={handleScroll}>
-            {gameMode === GameMode.WELCOME && renderWelcome()}
-            {gameMode === GameMode.MENU && renderMenu()}
-            
-            <div className={`flex-grow flex items-center justify-center ${gameMode !== GameMode.MENU ? 'px-3 py-4 md:px-4 md:py-6' : ''}`}>
-               <Suspense fallback={<NeuralLoader />}>
-                  {gameMode === GameMode.PROBLEM && <LogicGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.MEMORY && <MemoryGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.SEQUENCE && <SequenceGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.WORD && <WordGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.N_BACK && <NBackGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.COLOR_MATCH && <ColorMatchGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  
-                  {/* New Games */}
-                  {gameMode === GameMode.MATH_RUSH && <MathRushGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.ANAGRAM && <AnagramGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.VISUAL_SEARCH && <VisualSearchGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.NAVIGATION && <NavigationGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-                  {gameMode === GameMode.TASK_SWITCH && <TaskSwitchGame difficulty={difficulty} onEndGame={handleEndGame} onBack={resetGame} isQuickMode={isQuickMode} isPracticeMode={isPracticeMode} />}
-               </Suspense>
-
-               {gameMode === GameMode.RESULT && renderResult()}
+    <main className="min-h-screen bg-retro-dark text-white font-sans selection:bg-retro-green selection:text-black overflow-x-hidden relative">
+      <NeuralBackground />
+      
+      {/* Dynamic Header */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-black/90 border-b border-white/10 py-2' : 'bg-transparent py-4'}`}>
+        <div className="container mx-auto px-4 flex justify-between items-center">
+            {/* Logo Small (Only visible when scrolled or in game) */}
+            <div className={`transition-opacity duration-300 ${isScrolled || (gameMode !== GameMode.WELCOME && gameMode !== GameMode.MENU) ? 'opacity-100' : 'opacity-0'} flex items-center gap-2`}>
+                <div className="w-6 h-6 bg-retro-green rounded-sm animate-pulse"></div>
+                <span className="font-pixel text-xs md:text-sm text-white">NEURO<span className="text-retro-green">LATIH</span></span>
             </div>
+
+            <nav className="flex items-center gap-4 ml-auto">
+                <Button variant="ghost" onClick={() => setIsSettingsOpen(true)} className="!p-2">
+                    <Settings className="w-5 h-5 text-slate-300 hover:text-white" />
+                </Button>
+                {user && (
+                    <div className="hidden md:flex items-center gap-3 pl-4 border-l border-white/10">
+                        <div className="text-right">
+                            <p className="text-[10px] text-slate-400 font-pixel">OPERATOR</p>
+                            <p className="text-xs font-bold text-retro-green">{user.name}</p>
+                        </div>
+                        <img src={user.avatarUrl} alt="Avatar" className="w-8 h-8 rounded border border-retro-green bg-black" />
+                    </div>
+                )}
+            </nav>
         </div>
-    </div>
+      </header>
+
+      <div className="relative z-10 container mx-auto px-4 pt-20 pb-4 min-h-screen flex flex-col">
+        {renderContent()}
+      </div>
+
+      <RetroToast 
+        isVisible={toast.visible} 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast(prev => ({ ...prev, visible: false }))} 
+      />
+
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      
+      <DifficultyModal 
+        isOpen={pendingGameMode !== null} 
+        onClose={() => setPendingGameMode(null)}
+        onSelect={handleDifficultySelect}
+      />
+    </main>
   );
 };
 

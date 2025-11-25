@@ -7,7 +7,7 @@ import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { Grid, HelpCircle, Gauge } from 'lucide-react';
+import { Grid, HelpCircle, Gauge, Zap } from 'lucide-react';
 
 interface MemoryGameProps {
   difficulty: Difficulty;
@@ -107,7 +107,9 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
     if (!isPracticeMode && gameState === 'RECALL' && timeLeft > 0 && !showTutorial && !showQuitModal && introFinished) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
-          const newVal = Math.max(0, prev - 0.1);
+          // Double speed decrement if Quick Mode
+          const decrement = isQuickMode ? 0.2 : 0.1;
+          const newVal = Math.max(0, prev - decrement);
           if (newVal <= 0) {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
             return 0;
@@ -122,7 +124,7 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [gameState, showTutorial, showQuitModal, timeLeft, introFinished, isPracticeMode]);
+  }, [gameState, showTutorial, showQuitModal, timeLeft, introFinished, isPracticeMode, isQuickMode]);
 
   // Trigger finish when time hits 0
   useEffect(() => {
@@ -171,10 +173,15 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
       const baseShowTime = Math.max(500, 1500 - (currentLevel * 100));
       let speedMultiplier = 1;
       
-      switch(playbackSpeed) {
-        case 'LAMBAT': speedMultiplier = 1.5; break;
-        case 'SEDANG': speedMultiplier = 1.0; break;
-        case 'CEPAT': speedMultiplier = 0.6; break;
+      // If Quick Mode, force Fast speed (or faster)
+      if (isQuickMode) {
+          speedMultiplier = 0.5; // Very fast
+      } else {
+          switch(playbackSpeed) {
+            case 'LAMBAT': speedMultiplier = 1.5; break;
+            case 'SEDANG': speedMultiplier = 1.0; break;
+            case 'CEPAT': speedMultiplier = 0.6; break;
+          }
       }
       
       const finalShowTime = baseShowTime * speedMultiplier;
@@ -257,7 +264,8 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
         onClose={() => setShowTutorial(false)}
         title="Cara Bermain: Memori Pola"
         content={[
-          "Anda punya waktu total 30 Detik (Kecuali Mode Latihan).",
+          "Anda punya waktu total 30 Detik.",
+          isQuickMode ? "MODE CEPAT AKTIF: Pola muncul sekejap & Waktu berjalan 2x cepat!" : "",
           "Waktu HANYA berjalan saat fase Ulangi (Recall).",
           "Ingat posisi kotak yang menyala.",
           isPracticeMode ? "Mode Santai: Nyawa tidak terbatas." : "Hati-hati: Salah 3x = Game Over!"
@@ -282,23 +290,26 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
                 </Button>
             </Tooltip>
             
-            <div className="flex items-center gap-1 bg-slate-800/50 p-1 pl-2 rounded-lg border border-white/10">
-                <Gauge className="w-3 h-3 text-neuro-400" />
-                <select 
-                value={playbackSpeed}
-                onChange={(e) => setPlaybackSpeed(e.target.value as SpeedOption)}
-                className="bg-transparent text-[10px] font-bold text-slate-300 focus:outline-none cursor-pointer hover:text-white"
-                disabled={gameState === 'MEMORIZE'}
-                >
-                <option value="LAMBAT" className="bg-slate-800">Lambat</option>
-                <option value="SEDANG" className="bg-slate-800">Sedang</option>
-                <option value="CEPAT" className="bg-slate-800">Cepat</option>
-                </select>
-            </div>
+            {!isQuickMode && (
+                <div className="flex items-center gap-1 bg-slate-800/50 p-1 pl-2 rounded-lg border border-white/10">
+                    <Gauge className="w-3 h-3 text-neuro-400" />
+                    <select 
+                    value={playbackSpeed}
+                    onChange={(e) => setPlaybackSpeed(e.target.value as SpeedOption)}
+                    className="bg-transparent text-[10px] font-bold text-slate-300 focus:outline-none cursor-pointer hover:text-white"
+                    disabled={gameState === 'MEMORIZE'}
+                    >
+                    <option value="LAMBAT" className="bg-slate-800">Lambat</option>
+                    <option value="SEDANG" className="bg-slate-800">Sedang</option>
+                    <option value="CEPAT" className="bg-slate-800">Cepat</option>
+                    </select>
+                </div>
+            )}
           </div>
         </div>
 
         <div className="flex gap-2 w-full md:w-auto justify-end">
+           {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED x2</Badge>}
            <Badge color="bg-pink-500">Lvl {level}</Badge>
            <Badge color="bg-neuro-500">{isPracticeMode ? '∞' : '❤️'.repeat(Math.max(0, lives))}</Badge>
         </div>

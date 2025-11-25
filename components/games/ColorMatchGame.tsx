@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Difficulty, GameResult, GameMode } from '../../types';
 import { startMusic, stopMusic, playSound } from '../../services/audioService';
@@ -8,7 +7,7 @@ import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { Eye, HelpCircle } from 'lucide-react';
+import { Eye, HelpCircle, Zap } from 'lucide-react';
 
 interface ColorMatchGameProps {
   difficulty: Difficulty;
@@ -90,11 +89,13 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
     // Disabled in Practice Mode
     if (!isPracticeMode && introFinished && gameActive && !showTutorial && !showQuitModal && timeLeft > 0) {
       const timer = setInterval(() => {
-        setTimeLeft(prev => Math.max(0, prev - 0.1));
+        // Double speed decrement if Quick Mode
+        const decrement = isQuickMode ? 0.2 : 0.1;
+        setTimeLeft(prev => Math.max(0, prev - decrement));
       }, 100);
       return () => clearInterval(timer);
     }
-  }, [introFinished, gameActive, showTutorial, showQuitModal, timeLeft, isPracticeMode]);
+  }, [introFinished, gameActive, showTutorial, showQuitModal, timeLeft, isPracticeMode, isQuickMode]);
 
   // 4. Watch for Time Over
   useEffect(() => {
@@ -188,6 +189,7 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
         content={[
           "Abaikan TULISAN katanya.",
           "Fokus pada WARNA tintanya.",
+          isQuickMode ? "MODE CEPAT AKTIF: Waktu menipis 2x lebih cepat!" : "",
           "Jika tulisan 'MERAH' tapi berwarna BIRU, tekan tombol BIRU.",
           "Melatih Inhibisi (menekan respon otomatis)."
         ]}
@@ -209,7 +211,10 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
                 </Button>
             </Tooltip>
          </div>
-         <Badge color="bg-pink-500">Stroop</Badge>
+         <div className="flex gap-2">
+            {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED x2</Badge>}
+            <Badge color="bg-pink-500">Stroop</Badge>
+         </div>
       </div>
 
       <Card className="flex flex-col items-center">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, AIQuestion, GameResult, GameMode } from '../../types';
 import { generateRiddle } from '../../services/geminiService';
@@ -9,7 +8,7 @@ import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { CheckCircle, XCircle, Lightbulb, HelpCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Lightbulb, HelpCircle, Zap } from 'lucide-react';
 
 interface LogicGameProps {
   difficulty: Difficulty;
@@ -75,7 +74,9 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
     if (!isPracticeMode && gameActive && introFinished && !showTutorial && !showQuitModal && timeLeft > 0) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
-          const newVal = Math.max(0, prev - 0.1);
+          // Double speed decrement if Quick Mode is active
+          const decrement = isQuickMode ? 0.2 : 0.1;
+          const newVal = Math.max(0, prev - decrement);
           if (newVal <= 0) {
             handleFinish();
             return 0;
@@ -90,7 +91,7 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [gameActive, introFinished, showTutorial, showQuitModal, timeLeft, isPracticeMode]);
+  }, [gameActive, introFinished, showTutorial, showQuitModal, timeLeft, isPracticeMode, isQuickMode]);
 
   const handleNext = () => {
     if (!isPracticeMode && timeLeft <= 0) {
@@ -168,7 +169,8 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
         onClose={() => setShowTutorial(false)}
         title="Cara Bermain: Logika Masalah"
         content={[
-          "Anda memiliki waktu total 50 Detik (Kecuali Mode Latihan).",
+          "Anda memiliki waktu total 50 Detik.",
+          isQuickMode ? "MODE CEPAT AKTIF: Waktu berjalan 2x lebih cepat!" : "",
           "Pecahkan teka-teki logika lateral.",
           "Pilih jawaban yang paling masuk akal.",
           "Soal dihasilkan secara acak dari database sistem."
@@ -192,6 +194,7 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
           </Button>
         </div>
         <div className="flex gap-2 md:gap-4 flex-wrap justify-end">
+          {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED x2</Badge>}
           <Badge color="bg-indigo-500">{difficulty}</Badge>
           <Badge color="bg-emerald-500">Skor: {score}</Badge>
         </div>

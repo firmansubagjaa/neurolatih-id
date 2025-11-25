@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, AIQuestion, GameResult, GameMode } from '../../types';
 import { generateSequencePuzzle } from '../../services/geminiService';
@@ -9,7 +8,7 @@ import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { Network, CheckCircle, HelpCircle, XCircle } from 'lucide-react';
+import { Network, CheckCircle, HelpCircle, XCircle, Zap } from 'lucide-react';
 
 interface SequenceGameProps {
   difficulty: Difficulty;
@@ -81,7 +80,9 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
     if (!isPracticeMode && gameActive && introFinished && !showTutorial && !showQuitModal && timeLeft > 0) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
-          const newVal = Math.max(0, prev - 0.1);
+          // Double speed decrement if Quick Mode
+          const decrement = isQuickMode ? 0.2 : 0.1;
+          const newVal = Math.max(0, prev - decrement);
           if (newVal <= 0) {
             handleFinish();
             return 0;
@@ -97,7 +98,7 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameActive, introFinished, showTutorial, showQuitModal, timeLeft, isPracticeMode]);
+  }, [gameActive, introFinished, showTutorial, showQuitModal, timeLeft, isPracticeMode, isQuickMode]);
 
   const handleNext = () => {
     if (!isPracticeMode && timeLeft <= 0) {
@@ -181,7 +182,8 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
         onClose={() => setShowTutorial(false)}
         title="Cara Bermain: Logika Deret"
         content={[
-          "Anda memiliki waktu total 50 Detik (Kecuali Mode Latihan).",
+          "Anda memiliki waktu total 50 Detik.",
+          isQuickMode ? "MODE CEPAT: Waktu berkurang 2x lebih cepat!" : "",
           "Waktu BERJALAN TERUS meskipun soal sedang dimuat.",
           "Cari pola angka secepat mungkin.",
           "Otomatis lanjut ke soal berikutnya."
@@ -204,7 +206,8 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
             <HelpCircle className="w-5 h-5 mr-1" /> Cara Main
           </Button>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2 md:gap-4">
+          {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED x2</Badge>}
           <Badge color="bg-emerald-500">{difficulty}</Badge>
           <Badge color="bg-cyan-500">Skor: {score}</Badge>
         </div>
