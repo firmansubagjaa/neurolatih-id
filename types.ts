@@ -72,3 +72,22 @@ export interface AnagramQuestion {
   original: string;
   hint: string;
 }
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  joinedAt: number;
+  totalXp: number;
+  level: number;
+  currentStreak: number;
+  lastPlayedDate: string;
+  bestScores: { [key: string]: number };
+  unlockedAchievements: string[];
+}

@@ -1,66 +1,170 @@
-import { User, GameResult, DailyStat } from '../types';
 
-const USER_KEY = 'neuro_user_session';
-const HISTORY_KEY = 'neuro_game_history';
+import { UserProfile, GameResult, DailyStat, Achievement, GameMode, Difficulty } from '../types';
 
-// MOCK Google Auth Implementation
-// In a real production app, this would use Firebase Auth or Google Identity Services
-export const loginWithGoogle = async (): Promise<User> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const mockUser: User = {
-        id: 'user_' + Math.random().toString(36).substr(2, 9),
-        name: 'Neuro Traveler',
-        email: 'user@neurolatih.id',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
-      };
-      localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
-      
-      // Seed some initial data for demonstration if empty
-      const existingHistory = localStorage.getItem(HISTORY_KEY + '_' + mockUser.id);
-      if (!existingHistory) {
-        seedInitialData(mockUser.id);
-      }
-      
-      resolve(mockUser);
-    }, 1500); // Simulate network delay
-  });
-};
+const PROFILE_KEY = 'neuro_user_profile_v1';
+const HISTORY_KEY = 'neuro_game_history_v1';
 
-export const logout = async (): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      localStorage.removeItem(USER_KEY);
-      resolve();
-    }, 500);
-  });
-};
+// --- ACHIEVEMENTS DATABASE ---
+export const ACHIEVEMENTS_DB: Achievement[] = [
+  { id: 'FIRST_LOGIN', title: 'NEURAL LINK ESTABLISHED', description: 'Bergabung dengan sistem.', icon: '🔌' },
+  { id: 'FIRST_WIN', title: 'HELLO WORLD', description: 'Menyelesaikan game pertama.', icon: '👋' },
+  { id: 'PERFECT_SCORE', title: 'SYNAPTIC PERFECTION', description: 'Akurasi 100% dalam satu sesi.', icon: '🎯' },
+  { id: 'STREAK_3', title: 'CONSISTENT MIND', description: 'Bermain 3 hari berturut-turut.', icon: '🔥' },
+  { id: 'STREAK_7', title: 'NEURAL MASTER', description: 'Bermain 7 hari berturut-turut.', icon: '👑' },
+  { id: 'SCORE_1000', title: 'OVERCLOCKING', description: 'Mencapai skor 1000+ dalam satu game.', icon: '⚡' },
+  { id: 'NIGHT_OWL', title: 'NIGHT OWL', description: 'Bermain di atas jam 10 malam.', icon: '🦉' },
+];
 
-export const getCurrentUser = (): User | null => {
-  const stored = localStorage.getItem(USER_KEY);
+// --- CORE USER FUNCTIONS ---
+
+export const getUserProfile = (): UserProfile | null => {
+  const stored = localStorage.getItem(PROFILE_KEY);
   return stored ? JSON.parse(stored) : null;
 };
 
-export const saveGameResult = (userId: string, result: GameResult) => {
-  const key = HISTORY_KEY + '_' + userId;
-  const historyStr = localStorage.getItem(key);
-  const history: GameResult[] = historyStr ? JSON.parse(historyStr) : [];
+export const registerUser = (username: string): UserProfile => {
+  const newProfile: UserProfile = {
+    id: `u_${Date.now()}`,
+    username: username,
+    joinedAt: Date.now(),
+    totalXp: 0,
+    level: 1,
+    currentStreak: 1,
+    lastPlayedDate: new Date().toISOString().split('T')[0],
+    bestScores: {},
+    unlockedAchievements: []
+  };
   
-  const resultWithTime = { ...result, timestamp: Date.now() };
-  history.push(resultWithTime);
+  // Unlock first achievement
+  newProfile.unlockedAchievements.push('FIRST_LOGIN');
   
-  localStorage.setItem(key, JSON.stringify(history));
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile));
+  return newProfile;
 };
 
-export const getWeeklyStats = (userId: string): DailyStat[] => {
-  const key = HISTORY_KEY + '_' + userId;
-  const historyStr = localStorage.getItem(key);
-  const history: GameResult[] = historyStr ? JSON.parse(historyStr) : [];
+// Check streak on login/start
+export const checkAndRefreshStreak = (profile: UserProfile): UserProfile => {
+  const today = new Date().toISOString().split('T')[0];
+  if (profile.lastPlayedDate === today) return profile;
+
+  const last = new Date(profile.lastPlayedDate);
+  const now = new Date(today);
+  const diffTime = Math.abs(now.getTime() - last.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+  let newStreak = profile.currentStreak;
   
+  if (diffDays === 1) {
+    // Consecutive day
+    newStreak += 1;
+  } else if (diffDays > 1) {
+    // Streak broken
+    newStreak = 0; // Reset to 0 (will become 1 when they play a game)
+  }
+
+  const updated = { ...profile, currentStreak: newStreak, lastPlayedDate: today }; // Update date only when actually playing? 
+  // Actually, standard is to update 'lastPlayed' only on game completion for streak, 
+  // but for 'daily login' logic, we update here.
+  // Let's keep date update for game completion to force playing.
+  
+  // Actually, let's just return current state, streak logic is best handled on game save to ensure "Active Play"
+  return profile;
+};
+
+export const saveGameResult = (result: GameResult): { updatedProfile: UserProfile, result: GameResult } => {
+  let profile = getUserProfile();
+  if (!profile) throw new Error("No profile found");
+
+  const today = new Date().toISOString().split('T')[0];
+  const history = getGameHistory();
+  
+  // 1. STREAK LOGIC
+  const lastPlayed = profile.lastPlayedDate;
+  let newStreak = profile.currentStreak;
+  
+  if (lastPlayed !== today) {
+     const lastDate = new Date(lastPlayed);
+     const nowDate = new Date(today);
+     const diffDays = Math.floor((nowDate.getTime() - lastDate.getTime()) / (86400000));
+     
+     if (diffDays === 1) newStreak++;
+     else newStreak = 1;
+  }
+
+  // 2. BEST SCORE LOGIC
+  const scoreKey = `${result.gameMode}_${result.difficulty}`;
+  const currentBest = profile.bestScores[scoreKey] || 0;
+  const isNewBest = result.score > currentBest;
+  
+  const newBestScores = { ...profile.bestScores };
+  if (isNewBest) newBestScores[scoreKey] = result.score;
+
+  // 3. XP & LEVEL LOGIC
+  // Base XP = Score. Bonus for Hard mode.
+  const xpGained = result.score;
+  const newTotalXp = profile.totalXp + xpGained;
+  const newLevel = Math.floor(newTotalXp / 2000) + 1;
+
+  // 4. ACHIEVEMENT LOGIC
+  const newUnlockedIds: string[] = [];
+  const currentUnlocked = new Set(profile.unlockedAchievements);
+
+  // Helper to unlock
+  const checkUnlock = (id: string, condition: boolean) => {
+      if (condition && !currentUnlocked.has(id)) {
+          newUnlockedIds.push(id);
+          currentUnlocked.add(id);
+      }
+  };
+
+  checkUnlock('FIRST_WIN', true);
+  checkUnlock('PERFECT_SCORE', result.accuracy === 100);
+  checkUnlock('SCORE_1000', result.score >= 1000);
+  checkUnlock('STREAK_3', newStreak >= 3);
+  checkUnlock('STREAK_7', newStreak >= 7);
+  
+  const hour = new Date().getHours();
+  checkUnlock('NIGHT_OWL', hour >= 22 || hour < 4);
+
+  // 5. SAVE UPDATES
+  const updatedProfile: UserProfile = {
+      ...profile,
+      totalXp: newTotalXp,
+      level: newLevel,
+      currentStreak: newStreak,
+      lastPlayedDate: today,
+      bestScores: newBestScores,
+      unlockedAchievements: Array.from(currentUnlocked)
+  };
+
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
+
+  // Save History
+  const resultWithMeta: GameResult = {
+      ...result,
+      timestamp: Date.now(),
+      isNewBest,
+      xpGained,
+      newAchievements: ACHIEVEMENTS_DB.filter(a => newUnlockedIds.includes(a.id))
+  };
+  
+  history.push(resultWithMeta);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+
+  return { updatedProfile, result: resultWithMeta };
+};
+
+export const getGameHistory = (): GameResult[] => {
+  const str = localStorage.getItem(HISTORY_KEY);
+  return str ? JSON.parse(str) : [];
+};
+
+export const getWeeklyStats = (): DailyStat[] => {
+  const history = getGameHistory();
   const stats: DailyStat[] = [];
   const today = new Date();
   
-  // Initialize last 7 days with 0
+  // Last 7 days
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
@@ -68,7 +172,6 @@ export const getWeeklyStats = (userId: string): DailyStat[] => {
     stats.push({ date: dateStr, score: 0, gamesPlayed: 0 });
   }
 
-  // Aggregate scores
   history.forEach(game => {
     if (!game.timestamp) return;
     const dateStr = new Date(game.timestamp).toISOString().split('T')[0];
@@ -83,32 +186,6 @@ export const getWeeklyStats = (userId: string): DailyStat[] => {
   return stats;
 };
 
-// Helper to make the chart look cool for new users
-const seedInitialData = (userId: string) => {
-  const history: GameResult[] = [];
-  const today = new Date();
-  
-  for (let i = 1; i <= 5; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    
-    // Random activity
-    if (Math.random() > 0.3) {
-      const gamesCount = Math.floor(Math.random() * 3) + 1;
-      for (let j = 0; j < gamesCount; j++) {
-         history.push({
-           score: Math.floor(Math.random() * 500) + 100,
-           totalQuestions: 10,
-           correctAnswers: 8,
-           accuracy: 80,
-           duration: 50000,
-           difficulty: 'Menengah',
-           gameMode: 'MEMORY',
-           timestamp: d.getTime()
-         } as any);
-      }
-    }
-  }
-  
-  localStorage.setItem(HISTORY_KEY + '_' + userId, JSON.stringify(history));
+export const getUnlockedAchievements = (ids: string[]): Achievement[] => {
+    return ACHIEVEMENTS_DB.filter(a => ids.includes(a.id));
 };

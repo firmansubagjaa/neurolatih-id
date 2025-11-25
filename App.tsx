@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, Suspense } from 'react';
-import { GameMode, Difficulty, GameResult, User, FontSize, Language } from './types';
+import { GameMode, Difficulty, GameResult, UserProfile, FontSize, Language } from './types';
 import { Button, Card, NeuralLoader, Toggle, Badge, Tooltip } from './components/Shared';
 import { SettingsModal } from './components/SettingsModal';
 import { DifficultyModal } from './components/DifficultyModal';
@@ -7,11 +8,13 @@ import { Confetti } from './components/Confetti';
 import { WeeklyStats } from './components/WeeklyStats';
 import { NeuralBackground } from './components/NeuralBackground';
 import { RetroToast } from './components/RetroToast';
-import { generateGameFeedback, generateWelcomeMessage } from './services/geminiService';
+import { UsernameModal } from './components/UsernameModal';
+import { AchievementsModal } from './components/AchievementsModal';
+import { generateGameFeedback } from './services/geminiService';
 import { startMusic, stopMusic, playSound, toggleMute, getIsMuted } from './services/audioService';
-import { loginWithGoogle, logout, getCurrentUser, saveGameResult } from './services/authService';
+import { getUserProfile, registerUser, saveGameResult } from './services/authService';
 import { getTranslation } from './services/languageService';
-import { Brain, Zap, Network, Trophy, Lightbulb, Grid, Activity, BookOpen, Settings, RotateCcw, BrainCircuit, Eye, LogOut, Terminal, Calculator, Type, Scan, Compass, Shuffle, Volume2, VolumeX, Map, User as UserIcon, Star } from 'lucide-react';
+import { Zap, Network, Trophy, Lightbulb, Grid, BookOpen, Settings, RotateCcw, BrainCircuit, Eye, LogOut, Terminal, Calculator, Type, Scan, Compass, Shuffle, Volume2, VolumeX, Map, User as UserIcon, Star, Flame, Award, ArrowRight } from 'lucide-react';
 
 const LogicGame = React.lazy(() => import('./components/games/LogicGame'));
 const MemoryGame = React.lazy(() => import('./components/games/MemoryGame'));
@@ -27,7 +30,7 @@ const TaskSwitchGame = React.lazy(() => import('./components/games/TaskSwitchGam
 const PathfindingGame = React.lazy(() => import('./components/games/PathfindingGame'));
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>(GameMode.WELCOME);
   const [pendingGameMode, setPendingGameMode] = useState<GameMode | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.BEGINNER);
@@ -38,7 +41,8 @@ const App: React.FC = () => {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'info' | 'success' | 'warning' }>({
     visible: false,
@@ -51,10 +55,10 @@ const App: React.FC = () => {
     const savedLang = localStorage.getItem('neuro_lang') as Language;
     if (savedLang) setLanguage(savedLang);
     
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      setGameMode(GameMode.MENU);
+    // Check for existing user
+    const existingProfile = getUserProfile();
+    if (existingProfile) {
+      setProfile(existingProfile);
     }
   }, []);
 
@@ -64,20 +68,35 @@ const App: React.FC = () => {
     }
   }, [gameMode]);
 
-  const handleLogin = async () => {
-    setIsAuthLoading(true);
+  const handleStartSystem = () => {
     playSound('click');
-    const user = await loginWithGoogle();
-    setUser(user);
-    setIsAuthLoading(false);
-    setGameMode(GameMode.MENU);
-    setToast({ visible: true, message: `LOGIN SUCCESS: ${user.name}`, type: 'success' });
+    const existingProfile = getUserProfile();
+    if (existingProfile) {
+        setProfile(existingProfile);
+        setGameMode(GameMode.MENU);
+        setToast({ visible: true, message: `WELCOME BACK, ${existingProfile.username}`, type: 'success' });
+    } else {
+        setShowUsernameModal(true);
+    }
+  };
+
+  const handleRegister = (username: string) => {
+      const newProfile = registerUser(username);
+      setProfile(newProfile);
+      setShowUsernameModal(false);
+      setGameMode(GameMode.MENU);
+      setToast({ visible: true, message: `NEURAL LINK ESTABLISHED: ${username}`, type: 'success' });
+      // Show first achievement toast slightly later
+      setTimeout(() => {
+          setToast({ visible: true, message: '🏆 ACHIEVEMENT UNLOCKED: NEURAL LINK', type: 'warning' });
+          playSound('correct');
+      }, 1500);
   };
 
   const handleLogout = async () => {
+    // In this local version, maybe we just go back to title, keeping data?
+    // Or we allow clearing data? For now, just go back to welcome.
     playSound('click');
-    await logout();
-    setUser(null);
     setGameMode(GameMode.WELCOME);
   };
 
@@ -95,14 +114,31 @@ const App: React.FC = () => {
   };
 
   const handleEndGame = async (result: GameResult) => {
-    setLastResult(result);
-    setGameMode(GameMode.RESULT);
-    if (user && !result.isPractice) {
-        saveGameResult(user.id, result);
+    let finalResult = result;
+    
+    // Only save and track stats if not practice
+    if (!result.isPractice) {
+        const { updatedProfile, result: savedResult } = saveGameResult(result);
+        setProfile(updatedProfile); // Update UI with new XP/Streak
+        finalResult = savedResult;
+
+        // Toast for Achievements
+        if (savedResult.newAchievements && savedResult.newAchievements.length > 0) {
+            savedResult.newAchievements.forEach((ach, index) => {
+                setTimeout(() => {
+                    setToast({ visible: true, message: `🏆 UNLOCKED: ${ach.title}`, type: 'warning' });
+                    playSound('correct');
+                }, index * 2000);
+            });
+        }
     }
+
+    setLastResult(finalResult);
+    setGameMode(GameMode.RESULT);
+    
     setIsFeedbackLoading(true);
     try {
-      const feedback = await generateGameFeedback(result);
+      const feedback = await generateGameFeedback(finalResult);
       setAiFeedback(feedback);
     } catch (error) {
       setAiFeedback("CONNECTION_LOST");
@@ -144,8 +180,8 @@ const App: React.FC = () => {
               <span className="animate-blink inline-block w-3 h-5 bg-retro-green ml-1 align-middle"></span>
             </div>
 
-            <Button onClick={handleLogin} isLoading={isAuthLoading} className="text-xl md:text-2xl py-5 px-10 border-4 animate-pulse-fast hover:animate-none">
-              {isAuthLoading ? t('connecting') : t('startSystem')}
+            <Button onClick={handleStartSystem} className="text-xl md:text-2xl py-5 px-10 border-4 animate-pulse-fast hover:animate-none">
+               {t('startSystem')}
             </Button>
           </div>
         );
@@ -159,43 +195,54 @@ const App: React.FC = () => {
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                     
                     {/* Left: User Identity Module */}
-                    <div className="flex-1 bg-slate-900 border-2 border-slate-600 p-3 shadow-retro flex items-center gap-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-1">
-                             <div className="flex gap-1">
-                                 <div className="w-2 h-2 rounded-full bg-retro-red animate-pulse"></div>
-                                 <div className="w-2 h-2 rounded-full bg-retro-yellow animate-pulse delay-75"></div>
-                                 <div className="w-2 h-2 rounded-full bg-retro-green animate-pulse delay-150"></div>
+                    <div className="flex-1 bg-slate-900 border-2 border-slate-600 p-3 shadow-retro flex items-center gap-4 relative overflow-hidden group">
+                        {/* Profile Avatar */}
+                        <div className="w-16 h-16 bg-retro-green border-2 border-white flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_rgba(0,0,0,1)] relative">
+                             <UserIcon className="w-8 h-8 text-black" />
+                             <div className="absolute -bottom-2 -right-2 bg-black text-white text-[10px] font-pixel px-1 border border-white">
+                                LV.{profile?.level}
                              </div>
                         </div>
-
-                        <div className="w-14 h-14 bg-retro-yellow border-2 border-white flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                             <UserIcon className="w-8 h-8 text-black" />
-                        </div>
                         
-                        <div className="flex flex-col justify-center">
-                             <span className="text-[10px] text-retro-cyan font-pixel uppercase tracking-widest mb-1">OPERATOR_ID</span>
-                             <span className="text-xl text-white font-bold font-mono tracking-wide truncate max-w-[150px] md:max-w-[200px]">
-                                 {user?.name || 'GUEST_USER'}
+                        <div className="flex flex-col justify-center flex-1 min-w-0">
+                             <div className="flex justify-between items-center">
+                                <span className="text-[10px] text-retro-cyan font-pixel uppercase tracking-widest mb-1">OPERATOR</span>
+                                {profile && (
+                                    <div className="flex items-center gap-1 text-retro-red bg-black/50 px-2 rounded border border-retro-red/30">
+                                        <Flame className="w-3 h-3 fill-current animate-pulse" />
+                                        <span className="text-xs font-pixel">{profile.currentStreak} DAY STREAK</span>
+                                    </div>
+                                )}
+                             </div>
+                             <span className="text-xl text-white font-bold font-mono tracking-wide truncate">
+                                 {profile?.username || 'GUEST'}
                              </span>
-                             <div className="flex items-center gap-2 mt-1">
-                                 <div className="w-2 h-2 bg-retro-green rounded-full animate-pulse"></div>
-                                 <span className="text-[10px] text-retro-green font-mono">NEURAL LINK ACTIVE</span>
+                             
+                             {/* XP Bar */}
+                             <div className="w-full h-3 bg-black border border-slate-600 mt-2 relative">
+                                 <div 
+                                    className="h-full bg-gradient-to-r from-retro-cyan to-blue-500 transition-all duration-1000"
+                                    style={{ width: `${((profile?.totalXp || 0) % 2000) / 20}%` }}
+                                 ></div>
+                                 <span className="absolute top-0 right-1 text-[8px] text-white leading-3 font-pixel z-10">
+                                     {profile?.totalXp} XP
+                                 </span>
                              </div>
                         </div>
                     </div>
 
                     {/* Right: Credits / System Stats Module */}
-                    <div className="flex-1 bg-black border-2 border-slate-700 p-3 shadow-retro flex justify-between items-center relative">
-                        <div className="flex flex-col pl-2 border-l-4 border-retro-pink">
-                             <span className="text-[10px] text-slate-400 font-pixel uppercase">CREDITS</span>
-                             <div className="flex items-center gap-2">
-                                 <Star className="w-4 h-4 text-retro-pink fill-retro-pink" />
-                                 <span className="text-lg text-white font-mono font-bold">UNLIMITED</span>
-                             </div>
+                    <div className="flex-1 flex gap-4">
+                        <div className="flex-1 bg-black border-2 border-slate-700 p-3 shadow-retro flex flex-col justify-center items-center hover:border-retro-yellow cursor-pointer group transition-colors" onClick={() => setIsAchievementsOpen(true)}>
+                             <Award className="w-8 h-8 text-retro-yellow mb-1 group-hover:scale-110 transition-transform" />
+                             <span className="text-xs text-white font-pixel">ACHIEVEMENTS</span>
+                             <span className="text-[10px] text-slate-500 font-mono">
+                                 {profile?.unlockedAchievements.length} UNLOCKED
+                             </span>
                         </div>
-                        <div className="flex flex-col items-end pr-2">
-                             <span className="text-[10px] text-slate-400 font-pixel uppercase">SERVER TIME</span>
-                             <span className="text-sm text-retro-green font-mono">
+                        <div className="flex-1 bg-black border-2 border-slate-700 p-3 shadow-retro flex flex-col justify-center items-center">
+                             <span className="text-[10px] text-slate-400 font-pixel uppercase">SYSTEM TIME</span>
+                             <span className="text-xl text-retro-green font-mono">
                                  {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                              </span>
                         </div>
@@ -203,11 +250,11 @@ const App: React.FC = () => {
                 </div>
 
                 {/* 2. Main Title Separator */}
-                <div className="relative border-b-4 border-white mb-6 pb-2">
+                <div className="relative border-b-4 border-white mb-6 pb-2 flex justify-between items-end">
                      <h1 className="text-4xl md:text-6xl font-pixel text-white text-shadow-retro leading-none tracking-tight">
                         {t('mainMenu')}
                      </h1>
-                     <span className="absolute bottom-1 right-0 text-xs font-mono text-slate-500 bg-black px-2">V.8.0.1</span>
+                     <span className="text-xs font-mono text-slate-500 bg-black px-2 pb-1">V.8.1.0</span>
                 </div>
             </div>
 
@@ -215,7 +262,7 @@ const App: React.FC = () => {
                 {/* Stats Panel */}
                 <div className="lg:col-span-2 h-full">
                    <Card className="h-full bg-slate-900/80 border-slate-600 relative overflow-hidden group min-h-[220px]">
-                      {user && <WeeklyStats user={user} />}
+                      <WeeklyStats user={profile || undefined} />
                    </Card>
                 </div>
 
@@ -268,6 +315,13 @@ const App: React.FC = () => {
                    
                    <h3 className="text-sm font-bold text-white mb-1 font-pixel uppercase truncate">{game.name}</h3>
                    
+                   {/* Best Score Mini Badge */}
+                   {profile?.bestScores[`${game.id}_${difficulty}`] ? (
+                       <div className="text-[10px] font-mono text-slate-400">HI: {profile.bestScores[`${game.id}_${difficulty}`]}</div>
+                   ) : (
+                       <div className="text-[10px] font-mono text-slate-600">NO DATA</div>
+                   )}
+                   
                    <div className="mt-auto pt-4 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                       <span className="text-[10px] font-pixel text-black bg-white px-2 py-1 animate-blink">START</span>
                    </div>
@@ -295,6 +349,14 @@ const App: React.FC = () => {
                </div>
             </div>
 
+            {lastResult?.isNewBest && (
+                <div className="mb-6 animate-pulse">
+                    <div className="inline-flex items-center gap-2 bg-retro-yellow text-black px-4 py-2 font-pixel font-bold border-2 border-white transform rotate-2">
+                        <Star className="w-5 h-5 fill-current" /> NEW BEST SCORE! <Star className="w-5 h-5 fill-current" />
+                    </div>
+                </div>
+            )}
+
             <Card className="mb-8 bg-black border-4 border-retro-green p-0 relative overflow-hidden">
                 <div className="bg-retro-green p-2 text-black font-pixel text-center text-sm font-bold">REPORT CARD</div>
                 <div className="p-6">
@@ -302,6 +364,9 @@ const App: React.FC = () => {
                         <div className="text-center">
                             <p className="text-xs text-slate-500 uppercase tracking-widest mb-2 font-bold font-pixel">{t('totalScore')}</p>
                             <p className="text-4xl font-bold text-white font-mono">{lastResult?.score}</p>
+                            {lastResult?.xpGained && (
+                                <p className="text-xs text-retro-cyan mt-1">+ {lastResult.xpGained} XP</p>
+                            )}
                         </div>
                         <div className="text-center">
                             <p className="text-xs text-slate-500 uppercase tracking-widest mb-2 font-bold font-pixel">{t('accuracy')}</p>
@@ -364,7 +429,7 @@ const App: React.FC = () => {
       <NeuralBackground />
       
       {/* Settings / Mute Fab */}
-      <div className="fixed top-4 right-4 z-[100] flex gap-3">
+      <div className="fixed top-4 right-4 z-[90] flex gap-3">
           <Tooltip text={isMuted ? "UNMUTE" : "MUTE"} position="bottom">
             <button 
               onClick={() => { toggleMute(); setIsMuted(!isMuted); playSound('click'); }}
@@ -395,11 +460,25 @@ const App: React.FC = () => {
         setLanguage={(l) => { setLanguage(l); localStorage.setItem('neuro_lang', l); }}
         t={t}
       />
+      
       <DifficultyModal 
         isOpen={pendingGameMode !== null} 
         onClose={() => setPendingGameMode(null)} 
         onSelect={handleDifficultySelect} 
       />
+      
+      <UsernameModal 
+        isOpen={showUsernameModal} 
+        onSubmit={handleRegister} 
+      />
+
+      {profile && (
+        <AchievementsModal 
+            isOpen={isAchievementsOpen}
+            onClose={() => setIsAchievementsOpen(false)}
+            profile={profile}
+        />
+      )}
       
       <RetroToast 
         message={toast.message} 
