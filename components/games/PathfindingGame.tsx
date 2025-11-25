@@ -493,7 +493,7 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
                  <div className="w-6 h-6 border border-white flex items-center justify-center"><ArrowRight size={14} className="text-white"/></div>
                  <div className="w-6 h-6 border border-white bg-black flex items-center justify-center text-xs text-retro-red"><Flag size={14}/></div>
                </div>
-               <span className="text-xs text-slate-400">-> {t('avoidWalls')}</span>
+               <span className="text-xs text-slate-400">{t('avoidWalls')}</span>
             </div>,
             "INPUT COMMANDS > EXECUTE",
         ]}
@@ -638,7 +638,7 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
                      </div>
                 ) : (
                     <div className="flex flex-wrap gap-1 content-start">
-                        {commands.length === 0 && <span className="text-retro-green animate-pulse">> {t('commands')}...</span>}
+                        {commands.length === 0 && <span className="text-retro-green animate-pulse"> {t('commands')}...</span>}
                         {commands.map((cmd, idx) => (
                             <div key={idx} className={`w-7 h-7 flex items-center justify-center border-2 font-bold transition-all ${
                                 idx === activeCommandIndex
