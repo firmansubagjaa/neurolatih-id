@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Difficulty } from '../types';
 import { X, Sword, Shield, Skull } from 'lucide-react';
@@ -21,21 +22,26 @@ export const DifficultyModal: React.FC<DifficultyModalProps> = ({ isOpen, onClos
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-md bg-black border-4 border-white p-1 shadow-[10px_10px_0px_0px_rgba(255,255,255,0.2)] transform transition-all scale-100">
-        <div className="border-2 border-dashed border-slate-700 p-6 flex flex-col relative">
+        <div className="border-2 border-dashed border-slate-700 p-6 flex flex-col">
             
-            <Tooltip text="TUTUP" className="absolute top-2 right-2">
-                <button 
-                    onClick={() => { playSound('click'); onClose(); }} 
-                    className="text-slate-500 hover:text-red-500"
-                >
-                    <X className="w-6 h-6" />
-                </button>
-            </Tooltip>
-
-            <h2 className="text-xl md:text-2xl font-pixel text-center text-white mb-2 uppercase text-shadow-retro">
-                Select Difficulty
-            </h2>
-            <p className="text-center font-mono text-slate-400 text-xs mb-8">CHOOSE YOUR FATE</p>
+            {/* Header - Flex Row */}
+            <div className="flex justify-between items-start mb-6">
+                <div className="flex-1">
+                    <h2 className="text-xl md:text-2xl font-pixel text-white mb-1 uppercase text-shadow-retro">
+                        Select Difficulty
+                    </h2>
+                    <p className="font-mono text-slate-400 text-xs">CHOOSE YOUR FATE</p>
+                </div>
+                
+                <Tooltip text="TUTUP">
+                    <button 
+                        onClick={() => { playSound('click'); onClose(); }} 
+                        className="text-slate-500 hover:text-red-500 p-1 transition-colors"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </Tooltip>
+            </div>
 
             <div className="space-y-4">
                 {/* BEGINNER */}

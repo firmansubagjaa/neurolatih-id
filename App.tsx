@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo, useCallback } from 'react';
 import { GameMode, Difficulty, GameResult, UserProfile, FontSize, Language } from './types';
 import { Button, Card, NeuralLoader, Toggle, Badge, Tooltip } from './components/Shared';
 import { SettingsModal } from './components/SettingsModal';
 import { DifficultyModal } from './components/DifficultyModal';
+import { GameInfoModal } from './components/GameInfoModal';
 import { Confetti } from './components/Confetti';
 import { WeeklyStats } from './components/WeeklyStats';
 import { NeuralBackground } from './components/NeuralBackground';
@@ -32,7 +33,12 @@ const PathfindingGame = React.lazy(() => import('./components/games/PathfindingG
 const App: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>(GameMode.WELCOME);
+  
+  // Flow Management
   const [pendingGameMode, setPendingGameMode] = useState<GameMode | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showDifficultyModal, setShowDifficultyModal] = useState(false);
+
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.BEGINNER);
   const [lastResult, setLastResult] = useState<GameResult | null>(null);
   const [isQuickMode, setIsQuickMode] = useState(false);
@@ -50,25 +56,45 @@ const App: React.FC = () => {
     type: 'info'
   });
 
+  // Initial Load
   useEffect(() => {
     setIsMuted(getIsMuted());
     const savedLang = localStorage.getItem('neuro_lang') as Language;
     if (savedLang) setLanguage(savedLang);
+    const savedFont = localStorage.getItem('neuro_font_size') as FontSize;
+    if (savedFont) {
+        const sizeMap: Record<FontSize, string> = { 'SMALL': '14px', 'MEDIUM': '16px', 'LARGE': '20px' };
+        document.documentElement.style.fontSize = sizeMap[savedFont];
+    }
     
-    // Check for existing user
     const existingProfile = getUserProfile();
     if (existingProfile) {
       setProfile(existingProfile);
     }
   }, []);
 
+  // Document Title Update
+  useEffect(() => {
+    if (document.hidden) {
+        document.title = "Jgn Lupa Latihan! 🧠";
+    } else {
+        let prefix = "NeuroLatih 8-BIT";
+        if (gameMode === GameMode.MENU) prefix = "Dashboard | NeuroLatih";
+        else if (gameMode === GameMode.WELCOME) prefix = "Login | NeuroLatih";
+        else if (gameMode === GameMode.RESULT) prefix = "Result | NeuroLatih";
+        else prefix = `${gameMode} | NeuroLatih`;
+        document.title = prefix;
+    }
+  }, [gameMode]);
+
+  // Music Management
   useEffect(() => {
     if (gameMode === GameMode.WELCOME || gameMode === GameMode.MENU || gameMode === GameMode.RESULT) {
       startMusic('MENU');
     }
   }, [gameMode]);
 
-  const handleStartSystem = () => {
+  const handleStartSystem = useCallback(() => {
     playSound('click');
     const existingProfile = getUserProfile();
     if (existingProfile) {
@@ -76,60 +102,75 @@ const App: React.FC = () => {
         setGameMode(GameMode.MENU);
         setToast({ visible: true, message: `WELCOME BACK, ${existingProfile.username}`, type: 'success' });
     } else {
+        // If getUserProfile returned null but we had localStorage items, it means tampering occurred
+        if (localStorage.getItem('neuro_user_profile_v1')) {
+             setToast({ visible: true, message: 'SECURITY WARNING: SAVE DATA CORRUPTED/TAMPERED.', type: 'warning' });
+             playSound('wrong');
+             // In a real app, maybe force logout or clear storage here.
+             // For now, we show the registration modal to start fresh.
+        }
         setShowUsernameModal(true);
     }
-  };
+  }, []);
 
-  const handleRegister = (username: string) => {
+  const handleRegister = useCallback((username: string) => {
       const newProfile = registerUser(username);
       setProfile(newProfile);
       setShowUsernameModal(false);
       setGameMode(GameMode.MENU);
       setToast({ visible: true, message: `NEURAL LINK ESTABLISHED: ${username}`, type: 'success' });
-      // Show first achievement toast slightly later
       setTimeout(() => {
           setToast({ visible: true, message: '🏆 ACHIEVEMENT UNLOCKED: NEURAL LINK', type: 'warning' });
           playSound('correct');
       }, 1500);
-  };
+  }, []);
 
-  const handleLogout = async () => {
-    // In this local version, maybe we just go back to title, keeping data?
-    // Or we allow clearing data? For now, just go back to welcome.
+  const handleLogout = useCallback(async () => {
     playSound('click');
     setGameMode(GameMode.WELCOME);
-  };
+  }, []);
 
-  const handleGameSelect = (mode: GameMode) => {
+  const handleGameSelect = useCallback((mode: GameMode) => {
     playSound('click');
     setPendingGameMode(mode);
-  };
+    setShowInfoModal(true);
+  }, []);
 
-  const handleDifficultySelect = (diff: Difficulty) => {
+  const handleInfoProceed = useCallback(() => {
+    setShowInfoModal(false);
+    setShowDifficultyModal(true);
+  }, []);
+
+  const handleDifficultySelect = useCallback((diff: Difficulty) => {
     setDifficulty(diff);
-    setPendingGameMode(null);
+    setShowDifficultyModal(false);
+    
     if (pendingGameMode) {
       setGameMode(pendingGameMode);
+      setPendingGameMode(null);
     }
-  };
+  }, [pendingGameMode]);
 
-  const handleEndGame = async (result: GameResult) => {
+  const handleEndGame = useCallback(async (result: GameResult) => {
     let finalResult = result;
     
-    // Only save and track stats if not practice
     if (!result.isPractice) {
-        const { updatedProfile, result: savedResult } = saveGameResult(result);
-        setProfile(updatedProfile); // Update UI with new XP/Streak
-        finalResult = savedResult;
+        try {
+            const { updatedProfile, result: savedResult } = saveGameResult(result);
+            setProfile(updatedProfile);
+            finalResult = savedResult;
 
-        // Toast for Achievements
-        if (savedResult.newAchievements && savedResult.newAchievements.length > 0) {
-            savedResult.newAchievements.forEach((ach, index) => {
-                setTimeout(() => {
-                    setToast({ visible: true, message: `🏆 UNLOCKED: ${ach.title}`, type: 'warning' });
-                    playSound('correct');
-                }, index * 2000);
-            });
+            if (savedResult.newAchievements && savedResult.newAchievements.length > 0) {
+                savedResult.newAchievements.forEach((ach, index) => {
+                    setTimeout(() => {
+                        setToast({ visible: true, message: `🏆 UNLOCKED: ${ach.title}`, type: 'warning' });
+                        playSound('correct');
+                    }, index * 2000);
+                });
+            }
+        } catch (e) {
+            console.error("Save failed:", e);
+            setToast({ visible: true, message: "SAVE ERROR: DATA CORRUPTED", type: 'warning' });
         }
     }
 
@@ -145,20 +186,25 @@ const App: React.FC = () => {
     } finally {
       setIsFeedbackLoading(false);
     }
-  };
+  }, []);
+
+  const handleBackToMenu = useCallback(() => {
+      setGameMode(GameMode.MENU);
+  }, []);
 
   const t = (key: string) => getTranslation(language, key);
 
-  const renderContent = () => {
-    const gameProps = {
-        difficulty,
-        onEndGame: handleEndGame,
-        onBack: () => setGameMode(GameMode.MENU),
-        isQuickMode,
-        isPracticeMode,
-        language
-    };
+  // Memoize Game Props to prevent unnecessary re-renders of lazy loaded components
+  const gameProps = useMemo(() => ({
+      difficulty,
+      onEndGame: handleEndGame,
+      onBack: handleBackToMenu,
+      isQuickMode,
+      isPracticeMode,
+      language
+  }), [difficulty, handleEndGame, handleBackToMenu, isQuickMode, isPracticeMode, language]);
 
+  const renderContent = () => {
     switch (gameMode) {
       case GameMode.WELCOME:
         return (
@@ -189,14 +235,10 @@ const App: React.FC = () => {
       case GameMode.MENU:
         return (
           <div className="w-full max-w-6xl mx-auto animate-fade-in pb-20">
-            {/* --- NEW DASHBOARD HEADER --- */}
-            <div className="mt-16 mb-8">
-                {/* 1. Status Bar Container */}
+            <div className="mt-24 md:mt-16 mb-8">
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
-                    
-                    {/* Left: User Identity Module */}
+                    {/* User Profile */}
                     <div className="flex-1 bg-slate-900 border-2 border-slate-600 p-3 shadow-retro flex items-center gap-4 relative overflow-hidden group">
-                        {/* Profile Avatar */}
                         <div className="w-16 h-16 bg-retro-green border-2 border-white flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_rgba(0,0,0,1)] relative">
                              <UserIcon className="w-8 h-8 text-black" />
                              <div className="absolute -bottom-2 -right-2 bg-black text-white text-[10px] font-pixel px-1 border border-white">
@@ -205,20 +247,18 @@ const App: React.FC = () => {
                         </div>
                         
                         <div className="flex flex-col justify-center flex-1 min-w-0">
-                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-retro-cyan font-pixel uppercase tracking-widest mb-1">OPERATOR</span>
+                             <div className="flex flex-wrap justify-between items-center gap-2 mb-1">
+                                <span className="text-[10px] text-retro-cyan font-pixel uppercase tracking-widest">OPERATOR</span>
                                 {profile && (
-                                    <div className="flex items-center gap-1 text-retro-red bg-black/50 px-2 rounded border border-retro-red/30">
+                                    <div className="flex items-center gap-1 text-retro-red bg-black/50 px-2 rounded border border-retro-red/30 whitespace-nowrap">
                                         <Flame className="w-3 h-3 fill-current animate-pulse" />
-                                        <span className="text-xs font-pixel">{profile.currentStreak} DAY STREAK</span>
+                                        <span className="text-[10px] md:text-xs font-pixel">{profile.currentStreak} DAY STREAK</span>
                                     </div>
                                 )}
                              </div>
                              <span className="text-xl text-white font-bold font-mono tracking-wide truncate">
                                  {profile?.username || 'GUEST'}
                              </span>
-                             
-                             {/* XP Bar */}
                              <div className="w-full h-3 bg-black border border-slate-600 mt-2 relative">
                                  <div 
                                     className="h-full bg-gradient-to-r from-retro-cyan to-blue-500 transition-all duration-1000"
@@ -231,7 +271,7 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Right: Credits / System Stats Module */}
+                    {/* System Stats */}
                     <div className="flex-1 flex gap-4">
                         <div className="flex-1 bg-black border-2 border-slate-700 p-3 shadow-retro flex flex-col justify-center items-center hover:border-retro-yellow cursor-pointer group transition-colors" onClick={() => setIsAchievementsOpen(true)}>
                              <Award className="w-8 h-8 text-retro-yellow mb-1 group-hover:scale-110 transition-transform" />
@@ -249,7 +289,6 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 2. Main Title Separator */}
                 <div className="relative border-b-4 border-white mb-6 pb-2 flex justify-between items-end">
                      <h1 className="text-4xl md:text-6xl font-pixel text-white text-shadow-retro leading-none tracking-tight">
                         {t('mainMenu')}
@@ -259,14 +298,11 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                {/* Stats Panel */}
                 <div className="lg:col-span-2 h-full">
                    <Card className="h-full bg-slate-900/80 border-slate-600 relative overflow-hidden group min-h-[220px]">
                       <WeeklyStats user={profile || undefined} />
                    </Card>
                 </div>
-
-                {/* Config Panel */}
                 <Card className="flex flex-col gap-4 bg-slate-900/80 border-slate-600 h-full">
                     <div className="flex items-center gap-2 border-b-2 border-slate-700 pb-2">
                         <Settings className="w-4 h-4 text-retro-cyan" />
@@ -284,7 +320,7 @@ const App: React.FC = () => {
                 <h2 className="text-lg font-pixel text-white uppercase tracking-wider">{t('selectModule')}</h2>
             </div>
 
-            {/* Games Grid - Cartridge Style */}
+            {/* Games Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {[
                 { id: GameMode.MEMORY, name: "PATTERN", desc: "MEM", icon: <BrainCircuit />, color: "text-retro-pink border-retro-pink" },
@@ -305,7 +341,6 @@ const App: React.FC = () => {
                   onClick={() => handleGameSelect(game.id)} 
                   className={`group relative flex flex-col p-4 bg-black border-4 hover:-translate-y-2 transition-transform cursor-pointer shadow-retro ${game.color.split(' ')[1]}`}
                 >
-                   {/* Cartridge Label */}
                    <div className="absolute top-0 left-0 w-full h-2 bg-slate-800 opacity-50"></div>
                    
                    <div className="flex justify-between items-start mb-4 mt-2">
@@ -315,7 +350,6 @@ const App: React.FC = () => {
                    
                    <h3 className="text-sm font-bold text-white mb-1 font-pixel uppercase truncate">{game.name}</h3>
                    
-                   {/* Best Score Mini Badge */}
                    {profile?.bestScores[`${game.id}_${difficulty}`] ? (
                        <div className="text-[10px] font-mono text-slate-400">HI: {profile.bestScores[`${game.id}_${difficulty}`]}</div>
                    ) : (
@@ -323,7 +357,7 @@ const App: React.FC = () => {
                    )}
                    
                    <div className="mt-auto pt-4 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[10px] font-pixel text-black bg-white px-2 py-1 animate-blink">START</span>
+                      <span className="text-[10px] font-pixel text-black bg-white px-2 py-1 animate-blink">INFO</span>
                    </div>
                 </div>
               ))}
@@ -405,6 +439,7 @@ const App: React.FC = () => {
         );
 
       default:
+        // Lazy Load Games
         return (
           <Suspense fallback={<NeuralLoader message={t('loading')} />}>
              {gameMode === GameMode.PROBLEM && <LogicGame {...gameProps} />}
@@ -428,26 +463,28 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-retro-bg text-retro-green font-sans selection:bg-retro-green selection:text-black overflow-x-hidden relative flex flex-col">
       <NeuralBackground />
       
-      {/* Settings / Mute Fab */}
-      <div className="fixed top-4 right-4 z-[90] flex gap-3">
-          <Tooltip text={isMuted ? "UNMUTE" : "MUTE"} position="bottom">
-            <button 
-              onClick={() => { toggleMute(); setIsMuted(!isMuted); playSound('click'); }}
-              className="w-10 h-10 bg-black border-2 border-slate-600 hover:border-retro-green hover:text-retro-green text-slate-400 flex items-center justify-center shadow-retro active:translate-y-1 active:shadow-none transition-none"
-            >
-              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-            </button>
-          </Tooltip>
-          
-          <Tooltip text={t('settings')} position="bottom">
-            <button 
-              onClick={() => { setIsSettingsOpen(true); playSound('click'); }}
-              className="w-10 h-10 bg-black border-2 border-slate-600 hover:border-retro-cyan hover:text-retro-cyan text-slate-400 flex items-center justify-center shadow-retro active:translate-y-1 active:shadow-none transition-none"
-            >
-              <Settings size={18} />
-            </button>
-          </Tooltip>
-      </div>
+      {/* Floating Controls */}
+      {gameMode === GameMode.MENU && (
+        <div className="fixed top-4 right-4 z-[90] flex gap-3">
+            <Tooltip text={isMuted ? "UNMUTE" : "MUTE"} position="bottom">
+              <button 
+                onClick={() => { toggleMute(); setIsMuted(!isMuted); playSound('click'); }}
+                className="w-10 h-10 bg-black border-2 border-slate-600 hover:border-retro-green hover:text-retro-green text-slate-400 flex items-center justify-center shadow-retro active:translate-y-1 active:shadow-none transition-none"
+              >
+                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              </button>
+            </Tooltip>
+            
+            <Tooltip text={t('settings')} position="bottom">
+              <button 
+                onClick={() => { setIsSettingsOpen(true); playSound('click'); }}
+                className="w-10 h-10 bg-black border-2 border-slate-600 hover:border-retro-cyan hover:text-retro-cyan text-slate-400 flex items-center justify-center shadow-retro active:translate-y-1 active:shadow-none transition-none"
+              >
+                <Settings size={18} />
+              </button>
+            </Tooltip>
+        </div>
+      )}
 
       <main className="relative z-10 container mx-auto px-4 py-6 md:px-6 md:py-10 flex-1 flex flex-col justify-center">
         {renderContent()}
@@ -461,9 +498,16 @@ const App: React.FC = () => {
         t={t}
       />
       
+      <GameInfoModal
+        isOpen={showInfoModal}
+        gameMode={pendingGameMode}
+        onProceed={handleInfoProceed}
+        onClose={() => { setShowInfoModal(false); setPendingGameMode(null); }}
+      />
+
       <DifficultyModal 
-        isOpen={pendingGameMode !== null} 
-        onClose={() => setPendingGameMode(null)} 
+        isOpen={showDifficultyModal} 
+        onClose={() => { setShowDifficultyModal(false); setPendingGameMode(null); }} 
         onSelect={handleDifficultySelect} 
       />
       

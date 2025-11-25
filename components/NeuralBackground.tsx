@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 
 // Retro Starfield Background
@@ -11,23 +12,37 @@ export const NeuralBackground: React.FC = React.memo(() => {
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
+    let width = 0;
+    let height = 0;
     let animationFrameId: number;
 
-    const stars: { x: number; y: number; z: number }[] = [];
+    // Reuse star objects to reduce Garbage Collection (Memory Optimization)
     const numStars = 200;
+    const stars: { x: number; y: number; z: number }[] = new Array(numStars).fill(0).map(() => ({x:0, y:0, z:0}));
     const speed = 2;
 
-    const init = () => {
-      stars.length = 0;
+    const initStars = (w: number, h: number) => {
       for (let i = 0; i < numStars; i++) {
-        stars.push({
-          x: Math.random() * width - width / 2,
-          y: Math.random() * height - height / 2,
-          z: Math.random() * width
-        });
+        stars[i].x = Math.random() * w - w / 2;
+        stars[i].y = Math.random() * h - h / 2;
+        stars[i].z = Math.random() * w;
       }
+    };
+
+    const handleResize = () => {
+        // Handle High DPI Screens
+        const dpr = window.devicePixelRatio || 1;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        
+        // Scale context to match DPI
+        ctx.scale(dpr, dpr);
+        
+        // Re-initialize stars for new dimensions
+        initStars(width, height);
     };
 
     const animate = () => {
@@ -36,12 +51,15 @@ export const NeuralBackground: React.FC = React.memo(() => {
       
       // Draw Grid Line (Horizon)
       ctx.strokeStyle = '#1a8000'; // Dim Green
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let i = 0; i < height; i += 40) {
+      
+      const gridSpacing = 40;
+      for (let i = 0; i < height; i += gridSpacing) {
         ctx.moveTo(0, i);
         ctx.lineTo(width, i);
       }
-      for (let i = 0; i < width; i += 40) {
+      for (let i = 0; i < width; i += gridSpacing) {
         ctx.moveTo(i, 0);
         ctx.lineTo(i, height);
       }
@@ -69,22 +87,16 @@ export const NeuralBackground: React.FC = React.memo(() => {
 
         if (x >= 0 && x < width && y >= 0 && y < height) {
            // Green/White stars
-           ctx.fillStyle = Math.random() > 0.8 ? '#33ff00' : '#ffffff';
-           ctx.fillRect(x, y, size, size); // Square pixels
+           ctx.fillStyle = (i % 5 === 0) ? '#33ff00' : '#ffffff'; // Simple deterministic color mix
+           ctx.fillRect(x, y, size, size); // Square pixels for retro look
         }
       }
 
       animationFrameId = requestAnimationFrame(animate);
     };
 
-    const handleResize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-      init();
-    };
-
+    handleResize();
     window.addEventListener('resize', handleResize);
-    init();
     animate();
 
     return () => {
@@ -97,6 +109,7 @@ export const NeuralBackground: React.FC = React.memo(() => {
     <canvas 
       ref={canvasRef} 
       className="fixed inset-0 z-0 pointer-events-none opacity-60"
+      style={{ width: '100%', height: '100%' }}
     />
   );
 });
