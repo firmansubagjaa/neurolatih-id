@@ -19,6 +19,7 @@ import { Volume2, VolumeX, Settings } from 'lucide-react';
 import { WelcomeScreen } from './components/screens/WelcomeScreen';
 import { MenuScreen } from './components/screens/MenuScreen';
 import { ResultScreen } from './components/screens/ResultScreen';
+import { AboutScreen } from './components/screens/AboutScreen';
 
 // Lazy Games
 const LogicGame = React.lazy(() => import('./components/games/LogicGame'));
@@ -79,7 +80,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (gameMode === GameMode.WELCOME || gameMode === GameMode.MENU || gameMode === GameMode.RESULT) {
+    if (gameMode === GameMode.WELCOME || gameMode === GameMode.MENU || gameMode === GameMode.RESULT || gameMode === GameMode.ABOUT) {
       startMusic('MENU');
     }
   }, [gameMode]);
@@ -167,7 +168,16 @@ const App: React.FC = () => {
         return (
           <WelcomeScreen 
             onStart={handleStartSystem} 
-            text={{ welcome: t('welcome'), startSystem: t('startSystem') }} 
+            onAbout={() => setGameMode(GameMode.ABOUT)}
+            language={language}
+            text={{ welcome: t('welcome'), startSystem: t('startSystem'), aboutSystem: t('aboutSystem') }} 
+          />
+        );
+      case GameMode.ABOUT:
+        return (
+          <AboutScreen 
+            onBack={() => { playSound('click'); setGameMode(GameMode.WELCOME); }} 
+            language={language} 
           />
         );
       case GameMode.MENU:

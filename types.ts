@@ -14,7 +14,8 @@ export enum GameMode {
   NAVIGATION = 'NAVIGATION', // Spatial Orientation (New)
   TASK_SWITCH = 'TASK_SWITCH', // Cognitive Flexibility (Newest)
   PATHFINDING = 'PATHFINDING', // Spatial Planning (Newest)
-  RESULT = 'RESULT'
+  RESULT = 'RESULT',
+  ABOUT = 'ABOUT'
 }
 
 export enum Difficulty {

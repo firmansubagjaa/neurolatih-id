@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, GameMode, Difficulty } from '../../types';
 import { Button } from '../ui/Button';

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Difficulty, GameResult, GameMode, Language } from '../../types';
 import { startMusic, stopMusic, playSound } from '../../services/audioService';

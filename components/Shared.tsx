@@ -8,3 +8,4 @@ export { Badge } from './ui/Badge';
 export { Toggle } from './ui/Toggle';
 export { Tooltip } from './ui/Tooltip';
 export { NeuralLoader } from './ui/NeuralLoader';
+export { BrainVisualizer } from './BrainVisualizer';

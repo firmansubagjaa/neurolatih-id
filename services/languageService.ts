@@ -5,6 +5,7 @@ const DICTIONARY = {
   ID: {
     welcome: "Sistem Neuro-Link Terhubung.",
     startSystem: "MULAI SISTEM",
+    aboutSystem: "DATA / ABOUT",
     connecting: "MENGHUBUNGKAN...",
     mainMenu: "MENU UTAMA",
     status: "STATUS",
@@ -35,6 +36,16 @@ const DICTIONARY = {
     loading: "MEMUAT MODUL...",
     tutorialTitle: "CARA BERMAIN",
     ready: "SIAP, LAKSANAKAN!",
+    about: {
+      title: "DATABASE PENELITIAN",
+      abstract: "ABSTRAK & TUJUAN",
+      abstractText: "NeuroLatih dikembangkan berdasarkan prinsip 'Neuroplasticity'—kemampuan otak untuk memodifikasi koneksi saraf sebagai respons terhadap pengalaman baru. Tujuan aplikasi ini adalah menyediakan platform 'Gamified Cognitive Training' yang terstruktur untuk memelihara Kesehatan Kognitif dan meningkatkan Cognitive Reserve.",
+      mapping: "PEMETAAN KORTEKS",
+      output: "HARAPAN OUTPUT",
+      outputText: "Latihan rutin ditargetkan untuk meningkatkan Fluid Intelligence (Gf), kecepatan pemrosesan informasi, dan efisiensi eksekutif. Aplikasi ini berfungsi sebagai alat pelengkap untuk menjaga ketajaman mental di era digital.",
+      references: "REFERENSI / BASIS ILMIAH",
+      back: "KEMBALI"
+    },
     pathfinding: {
       title: "PEMROGRAMAN BOT",
       loadMission: "MEMUAT MISI...",
@@ -63,6 +74,7 @@ const DICTIONARY = {
   EN: {
     welcome: "Neuro-Link System Connected.",
     startSystem: "START SYSTEM",
+    aboutSystem: "DATA / ABOUT",
     connecting: "CONNECTING...",
     mainMenu: "MAIN MENU",
     status: "STATUS",
@@ -93,6 +105,16 @@ const DICTIONARY = {
     loading: "LOADING MODULE...",
     tutorialTitle: "HOW TO PLAY",
     ready: "READY, EXECUTE!",
+    about: {
+      title: "RESEARCH DATABASE",
+      abstract: "ABSTRACT & OBJECTIVE",
+      abstractText: "NeuroLatih is developed based on 'Neuroplasticity' principles—the brain's ability to reorganize itself by forming new neural connections. The goal is to provide structured 'Gamified Cognitive Training' to maintain Cognitive Health and enhance Cognitive Reserve.",
+      mapping: "CORTICAL MAPPING",
+      output: "EXPECTED OUTCOME",
+      outputText: "Routine training targets improvements in Fluid Intelligence (Gf), information processing speed, and executive efficiency. This app serves as a supplementary tool to maintain mental sharpness in the digital age.",
+      references: "REFERENCES / SCIENTIFIC BASIS",
+      back: "RETURN"
+    },
     pathfinding: {
       title: "BOT PROGRAMMING",
       loadMission: "LOADING MISSION...",
