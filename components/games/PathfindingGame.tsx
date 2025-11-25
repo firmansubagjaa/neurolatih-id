@@ -40,7 +40,7 @@ interface SavedGame {
   mazeType: MazeType;
 }
 
-const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false, language = 'ID' }) => {
+const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false, language = 'ID' as Language }) => {
   const t = (key: string) => getTranslation(language, `pathfinding.${key}`);
   
   // View State: SELECT (Menu) or GAME (Playing)
@@ -493,7 +493,7 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
                  <div className="w-6 h-6 border border-white flex items-center justify-center"><ArrowRight size={14} className="text-white"/></div>
                  <div className="w-6 h-6 border border-white bg-black flex items-center justify-center text-xs text-retro-red"><Flag size={14}/></div>
                </div>
-               <span className="text-xs text-slate-400">-> {t('avoidWalls')}</span>
+               <span className="text-xs text-slate-400"> {t('avoidWalls')}</span>
             </div>,
             "INPUT COMMANDS > EXECUTE",
         ]}
@@ -633,12 +633,12 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
                 
                 {isDebugMode ? (
                      <div className="flex flex-col gap-1 text-retro-green">
-                        {debugLogs.length === 0 && <span className="animate-pulse">> WAITING...</span>}
+                        {debugLogs.length === 0 && <span className="animate-pulse"> WAITING...</span>}
                         {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
                      </div>
                 ) : (
                     <div className="flex flex-wrap gap-1 content-start">
-                        {commands.length === 0 && <span className="text-retro-green animate-pulse">> {t('commands')}...</span>}
+                        {commands.length === 0 && <span className="text-retro-green animate-pulse"> {t('commands')}...</span>}
                         {commands.map((cmd, idx) => (
                             <div key={idx} className={`w-7 h-7 flex items-center justify-center border-2 font-bold transition-all ${
                                 idx === activeCommandIndex
