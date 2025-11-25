@@ -1,0 +1,297 @@
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Difficulty, AIQuestion, GameResult, GameMode } from '../../types';
+import { generateSequencePuzzle } from '../../services/geminiService';
+import { startMusic, stopMusic, playSound } from '../../services/audioService';
+import { Button, Card, Badge, NeuralLoader } from '../Shared';
+import { TutorialOverlay } from '../TutorialOverlay';
+import { QuitModal } from '../QuitModal';
+import { Confetti } from '../Confetti';
+import { CountdownBar } from '../CountdownBar';
+import { GameIntro } from '../GameIntro';
+import { Network, CheckCircle, HelpCircle, XCircle } from 'lucide-react';
+
+interface SequenceGameProps {
+  difficulty: Difficulty;
+  onEndGame: (result: GameResult) => void;
+  onBack: () => void;
+  isQuickMode?: boolean;
+  isPracticeMode?: boolean;
+}
+
+const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false }) => {
+  const [introFinished, setIntroFinished] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState<AIQuestion | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [score, setScore] = useState(0);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [gameActive, setGameActive] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showQuitModal, setShowQuitModal] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  // GLOBAL TIMER STATE (50 seconds total)
+  const TOTAL_TIME = 50;
+  const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
+
+  const isMountedRef = useRef(true);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchNextQuestion = useCallback(async () => {
+    setLoading(true);
+    setSelectedOption(null);
+    setShowConfetti(false);
+    setShowExplanation(false);
+    
+    try {
+      const q = await generateSequencePuzzle(difficulty);
+      if (isMountedRef.current) {
+        setCurrentQuestion(q);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [difficulty]);
+
+  // Initial Setup
+  useEffect(() => {
+    isMountedRef.current = true;
+    startMusic('FOCUS');
+    fetchNextQuestion(); // Pre-fetch during intro
+    
+    return () => {
+      isMountedRef.current = false;
+      stopMusic();
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Hardcore Timer Logic
+  useEffect(() => {
+    // Timer keeps running during loading in normal mode
+    // Stops for Tutorial or Quit Modal
+    // DISABLED in Practice Mode
+    if (!isPracticeMode && gameActive && introFinished && !showTutorial && !showQuitModal && timeLeft > 0) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          const newVal = Math.max(0, prev - 0.1);
+          if (newVal <= 0) {
+            handleFinish();
+            return 0;
+          }
+          return newVal;
+        });
+      }, 100);
+    } else {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    }
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameActive, introFinished, showTutorial, showQuitModal, timeLeft, isPracticeMode]);
+
+  const handleNext = () => {
+    if (!isPracticeMode && timeLeft <= 0) {
+      handleFinish();
+    } else {
+      fetchNextQuestion();
+    }
+  };
+
+  const handleAnswer = (index: number) => {
+    if (selectedOption !== null || (!isPracticeMode && timeLeft <= 0)) return;
+    setSelectedOption(index);
+    setQuestionsAnswered(prev => prev + 1);
+    
+    if (currentQuestion && index === currentQuestion.correctAnswerIndex) {
+      setScore(s => s + 100);
+      playSound('correct');
+      setShowConfetti(true);
+    } else {
+      playSound('wrong');
+    }
+    setShowExplanation(true);
+
+    // AUTO ADVANCE
+    setTimeout(() => {
+      if (isMountedRef.current && gameActive) {
+        handleNext();
+      }
+    }, 1000);
+  };
+
+  const handleFinish = () => {
+    if (!isMountedRef.current) return;
+    setGameActive(false);
+    playSound('win');
+    stopMusic();
+    
+    onEndGame({
+      score: score,
+      totalQuestions: questionsAnswered,
+      correctAnswers: score / 100,
+      accuracy: questionsAnswered > 0 ? (score / 100) / questionsAnswered * 100 : 0,
+      duration: (TOTAL_TIME - timeLeft) * 1000,
+      difficulty: difficulty,
+      gameMode: GameMode.SEQUENCE
+    });
+  };
+
+  const handleBackRequest = () => {
+    playSound('click');
+    if (isPracticeMode) {
+      handleFinish();
+    } else {
+      setShowQuitModal(true);
+    }
+  };
+
+  const handleConfirmQuit = () => {
+    setShowQuitModal(false);
+    onBack();
+  };
+
+  if (!gameActive) return null;
+
+  return (
+    <div className="w-full max-w-2xl mx-auto space-y-6 relative">
+      {!introFinished && (
+        <GameIntro 
+          gameMode={GameMode.SEQUENCE} 
+          onStart={() => {
+            playSound('click');
+            setIntroFinished(true);
+            setShowTutorial(true);
+          }} 
+        />
+      )}
+
+      {showConfetti && <Confetti />}
+      <TutorialOverlay 
+        isOpen={showTutorial} 
+        onClose={() => setShowTutorial(false)}
+        title="Cara Bermain: Logika Deret"
+        content={[
+          "Anda memiliki waktu total 50 Detik (Kecuali Mode Latihan).",
+          "Waktu BERJALAN TERUS meskipun soal sedang dimuat.",
+          "Cari pola angka secepat mungkin.",
+          "Otomatis lanjut ke soal berikutnya."
+        ]}
+        icon={<Network className="w-6 h-6" />}
+      />
+
+      <QuitModal 
+        isOpen={showQuitModal}
+        onConfirm={handleConfirmQuit}
+        onCancel={() => setShowQuitModal(false)}
+      />
+
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex gap-2 w-full md:w-auto">
+          <Button variant="ghost" onClick={handleBackRequest} className="!px-2">
+            &larr; {isPracticeMode ? "Selesai" : "Keluar"}
+          </Button>
+          <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400 hover:text-white">
+            <HelpCircle className="w-5 h-5 mr-1" /> Cara Main
+          </Button>
+        </div>
+        <div className="flex gap-4">
+          <Badge color="bg-emerald-500">{difficulty}</Badge>
+          <Badge color="bg-cyan-500">Skor: {score}</Badge>
+        </div>
+      </div>
+
+      <div className="relative min-h-[400px]">
+        {/* Global Timer Bar */}
+        <Card className="mb-4 py-3 px-4 bg-slate-800/80 border-slate-700">
+           <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
+        </Card>
+
+        {/* Large Prominent Timer */}
+        {!isPracticeMode && (
+          <div className="flex justify-center mb-6">
+            <div className={`text-6xl font-mono font-bold tracking-tighter transition-all duration-300 ${
+                timeLeft <= 10 ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse scale-110' : 
+                timeLeft <= 20 ? 'text-yellow-400' : 'text-white'
+            }`}>
+              {timeLeft.toFixed(1)}
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <Card className="flex flex-col items-center justify-center h-80 animate-pulse">
+            <NeuralLoader message="Menyusun angka acak..." />
+            {!isPracticeMode && <p className="text-xs text-slate-500 mt-4 animate-pulse">Waktu terus berjalan...</p>}
+          </Card>
+        ) : currentQuestion ? (
+          <Card className="border-t-4 border-t-emerald-500 animate-fade-in-up">
+            
+            <div className="flex flex-col items-center mb-8 text-center">
+              <div className="p-4 bg-emerald-900/30 rounded-full mb-4 ring-2 ring-emerald-500/20">
+                <Network className="w-10 h-10 text-emerald-400" />
+              </div>
+              <h3 className="text-2xl font-mono font-bold text-white leading-relaxed bg-slate-800/50 px-6 py-4 rounded-xl border border-white/5 w-full">
+                {currentQuestion.question}
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {currentQuestion.options.map((option, idx) => {
+                let btnClass = "p-6 rounded-xl border border-white/10 transition-all hover:bg-white/5 flex items-center justify-center gap-2 text-lg font-bold";
+                
+                if (selectedOption !== null) {
+                  if (idx === currentQuestion.correctAnswerIndex) {
+                    btnClass = "p-6 rounded-xl border border-emerald-500 bg-emerald-500/20 text-emerald-100 glow-success";
+                  } else if (idx === selectedOption) {
+                    btnClass = "p-6 rounded-xl border border-red-500 bg-red-500/20 text-red-100";
+                  } else {
+                    btnClass = "p-6 rounded-xl border border-white/5 opacity-30";
+                  }
+                }
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleAnswer(idx)}
+                    disabled={selectedOption !== null}
+                    className={btnClass}
+                  >
+                    {option}
+                    {(selectedOption !== null) && idx === currentQuestion.correctAnswerIndex && (
+                       <CheckCircle className="w-5 h-5" />
+                    )}
+                     {selectedOption !== null && idx === selectedOption && idx !== currentQuestion.correctAnswerIndex && (
+                        <XCircle className="w-5 h-5 text-red-400" />
+                      )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {showExplanation && (
+              <div className="animate-fade-in mb-2">
+                 <div className={`p-3 rounded-lg text-sm text-center border ${selectedOption === currentQuestion.correctAnswerIndex ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-200' : 'bg-red-900/20 border-red-500/30 text-red-200'}`}>
+                    {currentQuestion.explanation}
+                 </div>
+              </div>
+            )}
+          </Card>
+        ) : (
+          <div className="text-center text-red-400">Gagal memuat pertanyaan.</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default SequenceGame;

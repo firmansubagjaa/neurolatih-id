@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroLatih 8-BIT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"VT323"', 'monospace'],
+              pixel: ['"Press Start 2P"', 'cursive'],
+            },
+            colors: {
+              retro: {
+                bg: '#1a1a1a',
+                dark: '#050505',
+                green: '#33ff00',
+                greenDim: '#1a8000',
+                pink: '#ff00cc',
+                yellow: '#faff00',
+                cyan: '#00ffff',
+                red: '#ff0033',
+              }
+            },
+            animation: {
+              'blink': 'blink 1s step-end infinite',
+              'glitch': 'glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite',
+            },
+            keyframes: {
+              blink: {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0' },
+              },
+              glitch: {
+                '0%': { transform: 'translate(0)' },
+                '20%': { transform: 'translate(-2px, 2px)' },
+                '40%': { transform: 'translate(-2px, -2px)' },
+                '60%': { transform: 'translate(2px, 2px)' },
+                '80%': { transform: 'translate(2px, -2px)' },
+                '100%': { transform: 'translate(0)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        background-color: #050505;
+        color: #33ff00;
+        font-family: "VT323", monospace;
+        overflow-x: hidden;
+      }
+
+      /* CRT Scanline Effect */
+      body::before {
+        content: " ";
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        z-index: 9999;
+        background-size: 100% 2px, 3px 100%;
+        pointer-events: none;
+      }
+
+      /* Retro Scrollbar */
+      ::-webkit-scrollbar {
+        width: 12px;
+        background: #000;
+        border-left: 2px solid #33ff00;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #33ff00;
+        border: 2px solid #000;
+        box-shadow: inset 2px 2px 0px #fff;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #fff;
+      }
+
+      .retro-border {
+        box-shadow: 
+          -4px 0 0 0 black,
+          4px 0 0 0 black,
+          0 -4px 0 0 black,
+          0 4px 0 0 black;
+        border: 4px solid #33ff00;
+        background-color: #000;
+      }
+
+      .retro-btn {
+        image-rendering: pixelated;
+        box-shadow: inset -4px -4px 0px 0px rgba(0,0,0,0.5);
+      }
+      .retro-btn:active {
+        box-shadow: inset 4px 4px 0px 0px rgba(0,0,0,0.5);
+        transform: translateY(2px);
+      }
+      
+      .text-shadow-retro {
+        text-shadow: 2px 2px 0px #000;
+      }
+      
+      .text-shadow-glow {
+        text-shadow: 0 0 5px #33ff00, 0 0 10px #33ff00;
+      }
+
+      .crt-flicker {
+        animation: flicker 0.15s infinite;
+      }
+
+      @keyframes flicker {
+        0% { opacity: 0.97; }
+        100% { opacity: 1; }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
