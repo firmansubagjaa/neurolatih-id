@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Difficulty, GameResult, GameMode } from '../../types';
 import { startMusic, stopMusic, playSound } from '../../services/audioService';
@@ -31,6 +30,10 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  // Reaction Time Tracking
+  const questionStartTimeRef = useRef<number>(0);
+  const reactionTimesRef = useRef<number[]>([]);
+
   // Difficulty Scaling: Time Limit
   const getTimeLimit = () => {
     switch (difficulty) {
@@ -56,6 +59,9 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
   }, []);
 
   const generateProblem = () => {
+    // Record start time for agility calculation
+    questionStartTimeRef.current = Date.now();
+
     let num1, num2, op, ans;
     
     // Difficulty Scaling: Operations and Number Range
@@ -114,6 +120,13 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
     
     const accuracy = questionsAnswered > 0 ? (correctAnswers / questionsAnswered) * 100 : 0;
 
+    // Calculate Average Reaction Time
+    let avgReaction = 0;
+    if (reactionTimesRef.current.length > 0) {
+        const sum = reactionTimesRef.current.reduce((a, b) => a + b, 0);
+        avgReaction = sum / reactionTimesRef.current.length;
+    }
+
     onEndGame({
       score: score,
       totalQuestions: questionsAnswered,
@@ -121,7 +134,8 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
       accuracy: accuracy,
       duration: (TOTAL_TIME - timeLeft) * 1000,
       difficulty: difficulty,
-      gameMode: GameMode.MATH_RUSH
+      gameMode: GameMode.MATH_RUSH,
+      averageReactionTime: avgReaction // Send to result logic
     });
   }, [questionsAnswered, correctAnswers, score, timeLeft, difficulty, onEndGame, TOTAL_TIME]);
 
@@ -142,6 +156,11 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
 
   const handleAnswer = (val: number) => {
     if (!gameActive) return;
+    
+    // Calculate Agility
+    const reactionTime = Date.now() - questionStartTimeRef.current;
+    reactionTimesRef.current.push(reactionTime);
+
     setQuestionsAnswered(p => p + 1);
     
     if (val === problem.answer) {
@@ -185,8 +204,8 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
         content={[
           "Hitung secepat kilat.",
           "Waktu sangat terbatas.",
-          ...(isQuickMode ? ["MODE CEPAT: Waktu menipis 2x lebih cepat!"] : []), // Fixed bug
-          "Jangan panik, fokus pada angka.",
+          ...(isQuickMode ? ["MODE CEPAT: Waktu menipis 2x lebih cepat!"] : []),
+          "Kecepatan Anda diukur!",
         ]}
         icon={<Calculator className="w-6 h-6" />}
       />

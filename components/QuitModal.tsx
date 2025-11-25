@@ -14,7 +14,7 @@ interface QuitModalProps {
 
 export const QuitModal: React.FC<QuitModalProps> = ({ isOpen, onConfirm, onCancel, language = 'ID' }) => {
   if (!isOpen) return null;
-  const t = (k: string) => getTranslation(language, k);
+    const t = (k: string) => getTranslation(language as Language, k);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">

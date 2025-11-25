@@ -1,11 +1,10 @@
-
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, GameMode, Difficulty } from '../../types';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Toggle } from '../ui/Toggle';
 import { WeeklyStats } from '../WeeklyStats';
-import { LogOut, User as UserIcon, Flame, Award, Settings, Grid, BrainCircuit, Network, Lightbulb, BookOpen, RotateCcw, Eye, Calculator, Type, Scan, Compass, Shuffle, Map } from 'lucide-react';
+import { LogOut, User as UserIcon, Flame, Award, Settings, Grid, BrainCircuit, Network, Lightbulb, BookOpen, RotateCcw, Eye, Calculator, Type, Scan, Compass, Shuffle, Map, Timer } from 'lucide-react';
 
 interface MenuScreenProps {
   profile: UserProfile | null;
@@ -33,6 +32,35 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
   setIsPracticeMode
 }) => {
   
+  const [uptime, setUptime] = useState("00:00:00");
+  // Track today's date to auto-reset stats at midnight
+  const [currentDateCheck, setCurrentDateCheck] = useState(new Date().getDate());
+  const [forceStatsUpdate, setForceStatsUpdate] = useState(0);
+
+  useEffect(() => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      // 1. Update Uptime Timer
+      const diff = Date.now() - startTime;
+      const hrs = Math.floor(diff / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setUptime(
+        `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      );
+
+      // 2. Check for Midnight Reset (Day change)
+      const nowDay = new Date().getDate();
+      if (nowDay !== currentDateCheck) {
+          setCurrentDateCheck(nowDay);
+          setForceStatsUpdate(prev => prev + 1); // Force re-render of WeeklyStats
+      }
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentDateCheck]);
+
   const games = [
     { id: GameMode.MEMORY, name: "PATTERN", desc: "MEM", icon: <BrainCircuit />, color: "text-retro-pink border-retro-pink" },
     { id: GameMode.SEQUENCE, name: "SEQUENCE", desc: "LOGIC", icon: <Network />, color: "text-retro-green border-retro-green" },
@@ -95,11 +123,15 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                             {profile?.unlockedAchievements.length} UNLOCKED
                         </span>
                   </div>
-                  <div className="flex-1 bg-black border-2 border-slate-700 p-3 shadow-retro flex flex-col justify-center items-center">
-                        <span className="text-[10px] text-slate-400 font-pixel uppercase">SYSTEM TIME</span>
-                        <span className="text-xl text-retro-green font-mono">
-                            {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  <div className="flex-1 bg-black border-2 border-slate-700 p-3 shadow-retro flex flex-col justify-center items-center relative overflow-hidden">
+                        <span className="text-[10px] text-slate-400 font-pixel uppercase flex items-center gap-1">
+                            <Timer className="w-3 h-3" /> SESSION UPTIME
                         </span>
+                        <span className="text-xl text-retro-green font-mono tracking-widest relative z-10">
+                            {uptime}
+                        </span>
+                        {/* Background anim */}
+                        <div className="absolute inset-0 bg-retro-green/5 animate-pulse pointer-events-none"></div>
                   </div>
               </div>
           </div>
@@ -108,14 +140,15 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                 <h1 className="text-4xl md:text-6xl font-pixel text-white text-shadow-retro leading-none tracking-tight">
                   {t('mainMenu')}
                 </h1>
-                <span className="text-xs font-mono text-slate-500 bg-black px-2 pb-1">V.8.1.0</span>
+                <span className="text-xs font-mono text-slate-500 bg-black px-2 pb-1">V.8.1.1</span>
           </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 h-full">
               <Card className="h-full bg-slate-900/80 border-slate-600 relative overflow-hidden group min-h-[220px]">
-                <WeeklyStats user={profile || undefined} />
+                {/* Passing forceUpdate key forces re-render when day changes */}
+                <WeeklyStats key={forceStatsUpdate} user={profile || undefined} />
               </Card>
           </div>
           <Card className="flex flex-col gap-4 bg-slate-900/80 border-slate-600 h-full">

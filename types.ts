@@ -27,6 +27,26 @@ export type Language = 'ID' | 'EN';
 
 export type FontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
 
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string; // Emoji or Lucide icon name
+  unlockedAt?: number; // Timestamp
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  joinedAt: number;
+  totalXp: number;
+  level: number;
+  currentStreak: number;
+  lastPlayedDate: string; // YYYY-MM-DD
+  bestScores: Record<string, number>; // Key: "GAMEMODE_DIFFICULTY"
+  unlockedAchievements: string[]; // Array of Achievement IDs
+}
+
 export interface User {
   id: string;
   name: string;
@@ -49,8 +69,16 @@ export interface GameResult {
   difficulty: Difficulty;
   gameMode: GameMode;
   timestamp?: number;
-  mistakePatterns?: string[]; // New: List specific error types (e.g., "Impulsive Click", "Stroop Interference")
-  isPractice?: boolean; // New: Flag for practice mode
+  mistakePatterns?: string[]; 
+  isPractice?: boolean;
+  
+  // New properties for UI feedback
+  isNewBest?: boolean;
+  xpGained?: number;
+  newAchievements?: Achievement[];
+  
+  // New: Reaction Time Tracking
+  averageReactionTime?: number; // in milliseconds
 }
 
 export interface AIQuestion {
@@ -61,9 +89,9 @@ export interface AIQuestion {
 }
 
 export interface WordAssociationQuestion {
-  category: string; // The hint
-  correctWords: string[]; // 3 words
-  distractors: string[]; // 3 words
+  category: string; 
+  correctWords: string[]; 
+  distractors: string[]; 
   explanation: string;
 }
 
@@ -71,23 +99,4 @@ export interface AnagramQuestion {
   scrambled: string;
   original: string;
   hint: string;
-}
-
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-}
-
-export interface UserProfile {
-  id: string;
-  username: string;
-  joinedAt: number;
-  totalXp: number;
-  level: number;
-  currentStreak: number;
-  lastPlayedDate: string;
-  bestScores: { [key: string]: number };
-  unlockedAchievements: string[];
 }

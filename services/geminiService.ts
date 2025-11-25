@@ -1,8 +1,7 @@
-
 import { Difficulty, AIQuestion, WordAssociationQuestion, AnagramQuestion, GameResult, GameMode } from "../types";
 
 // --- DATABASE SOAL LOKAL (BAHASA INDONESIA) ---
-
+// (Database arrays remain unchanged for brevity, focusing on feedback logic)
 const RIDDLES_DB = [
   { q: "Aku punya leher tapi tidak punya kepala. Aku punya lengan tapi tidak punya tangan. Siapakah aku?", a: "Baju", o: ["Baju", "Botol", "Kursi", "Gelas"], expl: "Baju memiliki kerah (leher) dan lengan baju." },
   { q: "Makin banyak yang kamu ambil, makin besar aku. Apakah aku?", a: "Lubang", o: ["Lubang", "Hutang", "Ilmu", "Makanan"], expl: "Menggali lubang membuatnya semakin besar." },
@@ -131,22 +130,21 @@ export const generateSequencePuzzle = async (difficulty: Difficulty, mode: 'LINE
   const maxStart = difficulty === Difficulty.BEGINNER ? 20 : difficulty === Difficulty.INTERMEDIATE ? 50 : 100;
   const maxStep = difficulty === Difficulty.BEGINNER ? 5 : difficulty === Difficulty.INTERMEDIATE ? 10 : 25;
 
-  // 1. LINEAR: Simple Arithmetic (+, -, *)
   if (mode === 'LINEAR') {
     const start = Math.floor(Math.random() * maxStart) + 1;
     const step = Math.floor(Math.random() * maxStep) + 2;
     const op = Math.random();
     
-    if (op < 0.4) { // Addition
+    if (op < 0.4) {
         sequence = [start, start + step, start + step*2, start + step*3];
         nextVal = start + step * 4;
         rule = `Pola: +${step}`;
-    } else if (op < 0.7) { // Subtraction (ensure positive)
+    } else if (op < 0.7) {
         const startHigh = start + (step * 5);
         sequence = [startHigh, startHigh - step, startHigh - step*2, startHigh - step*3];
         nextVal = startHigh - step * 4;
         rule = `Pola: -${step}`;
-    } else { // Multiplication (Limit size based on difficulty)
+    } else {
         const s = Math.floor(Math.random() * 3) + 2;
         const m = difficulty === Difficulty.ADVANCED ? (Math.floor(Math.random() * 3) + 2) : 2; 
         sequence = [s, s*m, s*m*m, s*m*m*m];
@@ -154,25 +152,22 @@ export const generateSequencePuzzle = async (difficulty: Difficulty, mode: 'LINE
         rule = `Pola: x${m}`;
     }
   } 
-  
-  // 2. COMPLEX: Fibonacci, Primes, Squares
   else if (mode === 'COMPLEX') {
      const type = Math.random();
-     if (type < 0.3) { // Fibonacci
+     if (type < 0.3) {
          const n1 = Math.floor(Math.random() * (difficulty === Difficulty.ADVANCED ? 20 : 5)) + 1;
          const n2 = Math.floor(Math.random() * 5) + n1;
          sequence = [n1, n2, n1+n2, n2+(n1+n2), (n1+n2)+(n2+(n1+n2))];
          sequence = sequence.slice(0, 4);
          nextVal = sequence[2] + sequence[3];
          rule = "Fibonacci (Jumlah dua angka sebelumnya)";
-     } else if (type < 0.6) { // Squares / Powers
+     } else if (type < 0.6) {
          const start = Math.floor(Math.random() * (difficulty === Difficulty.ADVANCED ? 8 : 3)) + 1;
          sequence = [start**2, (start+1)**2, (start+2)**2, (start+3)**2];
          nextVal = (start+4)**2;
          rule = "Bilangan Kuadrat (n^2)";
-     } else { // Primes
+     } else {
          const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
-         // Advanced accesses larger primes
          const maxIdx = difficulty === Difficulty.ADVANCED ? primes.length - 5 : 10;
          const startIdx = Math.floor(Math.random() * maxIdx);
          sequence = primes.slice(startIdx, startIdx + 4);
@@ -180,24 +175,17 @@ export const generateSequencePuzzle = async (difficulty: Difficulty, mode: 'LINE
          rule = "Bilangan Prima berurutan";
      }
   }
-  
-  // 3. CHAOS: Interleaved Sequences (Two alternating patterns)
   else {
-      // Seq A
       const startA = Math.floor(Math.random() * maxStart) + 1;
       const stepA = Math.floor(Math.random() * (difficulty === Difficulty.BEGINNER ? 5 : 10)) + 1;
       
-      // Seq B
       const startB = Math.floor(Math.random() * 50) + 50;
       const stepB = Math.floor(Math.random() * (difficulty === Difficulty.BEGINNER ? 5 : 10)) + 1;
       
-      // Pattern: A1, B1, A2, B2, A3... Ask for B3 or A4 depending on difficulty
       if (difficulty === Difficulty.BEGINNER) {
-          // A1, B1, A2, B2, A3, ... ? (B3)
           sequence = [startA, startB, startA + stepA, startB - stepB, startA + stepA*2];
           nextVal = startB - stepB*2;
       } else {
-          // A1, B1, A2, B2, A3, B3, ... ? (A4)
            sequence = [startA, startB, startA + stepA, startB - stepB, startA + stepA*2, startB - stepB*2];
            nextVal = startA + stepA*3;
       }
@@ -205,7 +193,6 @@ export const generateSequencePuzzle = async (difficulty: Difficulty, mode: 'LINE
       rule = `Interleaved: Pola 1 (+${stepA}), Pola 2 (-${stepB})`;
   }
 
-  // Generate Options
   options.push(nextVal);
   while(options.length < 4) {
     const offset = Math.floor(Math.random() * 10) - 5 || 1;
@@ -239,25 +226,19 @@ export const generateAnagram = async (difficulty: Difficulty): Promise<AnagramQu
   await delay(500);
   let pool = ANAGRAM_DB;
   
-  // Enhanced Difficulty Filtering
   if (difficulty === Difficulty.BEGINNER) {
-      // Short words (4-6 chars)
       pool = ANAGRAM_DB.filter(x => x.raw.length >= 4 && x.raw.length <= 6);
   } else if (difficulty === Difficulty.INTERMEDIATE) {
-      // Medium words (6-8 chars)
       pool = ANAGRAM_DB.filter(x => x.raw.length > 5 && x.raw.length <= 8);
   } else {
-      // Long words (8+ chars)
       pool = ANAGRAM_DB.filter(x => x.raw.length >= 8);
   }
   
-  // Fallback if pool is empty (shouldn't happen with updated DB)
   if (pool.length === 0) pool = ANAGRAM_DB;
 
   const item = pool[Math.floor(Math.random() * pool.length)];
   let scrambled = shuffleArray(item.raw.split('')).join('');
   
-  // Ensure not same as original
   while (scrambled === item.raw) {
       scrambled = shuffleArray(item.raw.split('')).join('');
   }
@@ -269,24 +250,33 @@ export const generateAnagram = async (difficulty: Difficulty): Promise<AnagramQu
   };
 };
 
+// IMPROVED FEEDBACK LOGIC WITH REACTION TIME
 export const generateGameFeedback = async (result: GameResult): Promise<string> => {
   await delay(1000); 
 
   const acc = result.accuracy;
   const mistakes = result.mistakePatterns || [];
+  const rt = result.averageReactionTime;
+
+  let rtAnalysis = "";
+  if (rt) {
+      if (rt < 1000) rtAnalysis = `KECEPATAN REFLEKS: ${rt.toFixed(0)}ms (SANGAT CEPAT - TOP 5%)`;
+      else if (rt < 2000) rtAnalysis = `KECEPATAN REFLEKS: ${rt.toFixed(0)}ms (NORMAL)`;
+      else rtAnalysis = `KECEPATAN REFLEKS: ${rt.toFixed(0)}ms (PERLU DITINGKATKAN)`;
+  }
 
   if (acc >= 90) {
-    if (result.duration < 20000) return "Analisis: Kecepatan dan akurasi di tingkat Master. Sirkuit saraf Anda sangat efisien.";
-    return "Analisis: Fokus yang luar biasa. Pertahankan konsistensi ini untuk memperkuat memori jangka panjang.";
+    if (result.duration < 20000) return `Analisis: PERFORMA MASTER. Sirkuit saraf sangat efisien. ${rtAnalysis}`;
+    return `Analisis: Fokus yang luar biasa. Akurasi tinggi. ${rtAnalysis}`;
   }
   
   if (acc >= 70) {
-    if (mistakes.length > 0) return `Analisis: Bagus, namun terdeteksi pola kesalahan '${mistakes[0]}'. Cobalah lebih tenang sebelum menjawab.`;
-    return "Analisis: Performa solid. Sedikit lagi latihan untuk mencapai potensi maksimal.";
+    if (mistakes.length > 0) return `Analisis: Bagus, namun terdeteksi pola kesalahan '${mistakes[0]}'. ${rtAnalysis}`;
+    return `Analisis: Performa solid. Sedikit lagi latihan untuk mencapai potensi maksimal. ${rtAnalysis}`;
   }
   
   if (acc >= 50) {
-    return "Analisis: Terdeteksi keraguan dalam pengambilan keputusan. Jangan terburu-buru, fokus pada pola.";
+    return `Analisis: Terdeteksi keraguan dalam pengambilan keputusan. Jangan terburu-buru. ${rtAnalysis}`;
   }
 
   return "Analisis: Sinyal saraf tidak stabil. Disarankan latihan intensif pada mode 'Pemula' untuk membangun fondasi.";

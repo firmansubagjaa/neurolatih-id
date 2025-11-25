@@ -42,7 +42,7 @@ interface SavedGame {
 }
 
 const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false, language = 'ID' }) => {
-  const t = (key: string) => getTranslation(language, `pathfinding.${key}`);
+  const t = (key: string) => getTranslation(language as Language, `pathfinding.${key}`);
   
   const [viewState, setViewState] = useState<'SELECT' | 'GAME'>('SELECT');
   const [introFinished, setIntroFinished] = useState(false);
