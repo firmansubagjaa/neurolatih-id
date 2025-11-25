@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, AIQuestion, GameResult, GameMode } from '../../types';
 import { generateSequencePuzzle } from '../../services/geminiService';
@@ -8,7 +9,7 @@ import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { Network, CheckCircle, HelpCircle, XCircle, Zap } from 'lucide-react';
+import { Network, CheckCircle, HelpCircle, XCircle, Zap, TrendingUp, Layers, Shuffle } from 'lucide-react';
 
 interface SequenceGameProps {
   difficulty: Difficulty;
@@ -18,7 +19,12 @@ interface SequenceGameProps {
   isPracticeMode?: boolean;
 }
 
+type LogicMode = 'LINEAR' | 'COMPLEX' | 'CHAOS';
+
 const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false }) => {
+  const [viewState, setViewState] = useState<'SELECT' | 'GAME'>('SELECT');
+  const [logicMode, setLogicMode] = useState<LogicMode>('LINEAR');
+
   const [introFinished, setIntroFinished] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<AIQuestion | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,8 +37,16 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
   const [showConfetti, setShowConfetti] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
 
-  // GLOBAL TIMER STATE (50 seconds total)
-  const TOTAL_TIME = 50;
+  // Difficulty Scaling: Time Limit
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 60;
+      case Difficulty.INTERMEDIATE: return 45;
+      case Difficulty.ADVANCED: return 30;
+      default: return 60;
+    }
+  };
+  const TOTAL_TIME = getTimeLimit();
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
 
   const isMountedRef = useRef(true);
@@ -45,7 +59,8 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
     setShowExplanation(false);
     
     try {
-      const q = await generateSequencePuzzle(difficulty);
+      // Pass the selected logicMode to the generator
+      const q = await generateSequencePuzzle(difficulty, logicMode);
       if (isMountedRef.current) {
         setCurrentQuestion(q);
       }
@@ -56,25 +71,23 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
         setLoading(false);
       }
     }
-  }, [difficulty]);
+  }, [difficulty, logicMode]);
 
   // Initial Setup
   useEffect(() => {
     isMountedRef.current = true;
     startMusic('FOCUS');
-    fetchNextQuestion(); // Pre-fetch during intro
     
     return () => {
       isMountedRef.current = false;
       stopMusic();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Hardcore Timer Logic
   useEffect(() => {
-    if (!isPracticeMode && gameActive && introFinished && !showTutorial && !showQuitModal && timeLeft > 0) {
+    if (viewState === 'GAME' && !isPracticeMode && gameActive && introFinished && !showTutorial && !showQuitModal && timeLeft > 0) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           const decrement = isQuickMode ? 0.2 : 0.1;
@@ -94,7 +107,15 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameActive, introFinished, showTutorial, showQuitModal, timeLeft, isPracticeMode, isQuickMode]);
+  }, [viewState, gameActive, introFinished, showTutorial, showQuitModal, timeLeft, isPracticeMode, isQuickMode]);
+
+  const startGame = (mode: LogicMode) => {
+      setLogicMode(mode);
+      setViewState('GAME');
+      setIntroFinished(false);
+      setTimeLeft(TOTAL_TIME);
+      fetchNextQuestion();
+  };
 
   const handleNext = () => {
     if (!isPracticeMode && timeLeft <= 0) {
@@ -123,7 +144,7 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
       if (isMountedRef.current && gameActive) {
         handleNext();
       }
-    }, 1000);
+    }, 1500); // Slightly longer to read explanation
   };
 
   const handleFinish = () => {
@@ -159,6 +180,41 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
 
   if (!gameActive) return null;
 
+  // --- SELECT SCREEN ---
+  if (viewState === 'SELECT') {
+      return (
+        <div className="w-full max-w-2xl mx-auto space-y-4 animate-fade-in">
+             <div className="flex justify-between items-center mb-4">
+                 <Button variant="ghost" onClick={onBack}>&larr; LOGIC MODULES</Button>
+                 <Badge color="bg-retro-green">SEQUENCE</Badge>
+             </div>
+             
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 {[
+                     { id: 'LINEAR', name: "LINEAR", sub: "Aritmatika", icon: <TrendingUp />, desc: "Pola dasar: +, -, x." },
+                     { id: 'COMPLEX', name: "COMPLEX", sub: "Abstrak", icon: <Layers />, desc: "Fibonacci, Prima, Pangkat." },
+                     { id: 'CHAOS', name: "CHAOS", sub: "Multilayer", icon: <Shuffle />, desc: "Dua pola selang-seling." },
+                 ].map((m) => (
+                     <Card 
+                        key={m.id} 
+                        onClick={() => startGame(m.id as LogicMode)} 
+                        className="cursor-pointer hover:border-retro-green hover:-translate-y-1 transition-all group"
+                     >
+                         <div className="flex items-center gap-3 mb-2">
+                             <div className="text-retro-green group-hover:scale-110 transition-transform">{m.icon}</div>
+                             <div>
+                                <h3 className="font-pixel text-sm">{m.name}</h3>
+                                <span className="text-[10px] bg-slate-800 px-1 rounded text-slate-300">{m.sub}</span>
+                             </div>
+                         </div>
+                         <p className="text-xs text-slate-400 font-mono leading-tight">{m.desc}</p>
+                     </Card>
+                 ))}
+             </div>
+        </div>
+      );
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 relative">
       {!introFinished && (
@@ -176,13 +232,12 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
       <TutorialOverlay 
         isOpen={showTutorial} 
         onClose={() => setShowTutorial(false)}
-        title="Cara Bermain: Logika Deret"
+        title={`Cara Bermain: ${logicMode}`}
         content={[
-          "Anda memiliki waktu total 50 Detik.",
+          "Analisis deret angka yang muncul.",
+          "Temukan pola logikanya (Misal: +2, x3, Fibonacci).",
           ...(isQuickMode ? ["MODE CEPAT: Waktu berkurang 2x lebih cepat!"] : []), 
-          "Waktu BERJALAN TERUS meskipun soal sedang dimuat.",
-          "Cari pola angka secepat mungkin.",
-          "Otomatis lanjut ke soal berikutnya."
+          "Pilih angka selanjutnya yang benar."
         ]}
         icon={<Network className="w-6 h-6" />}
       />
@@ -196,15 +251,15 @@ const SequenceGame: React.FC<SequenceGameProps> = ({ difficulty, onEndGame, onBa
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div className="flex gap-2 w-full md:w-auto">
           <Button variant="ghost" onClick={handleBackRequest} className="!px-3 text-sm">
-            &larr; {isPracticeMode ? "Selesai" : "Keluar"}
+            &larr; Mode
           </Button>
           <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-3 text-neuro-400 hover:text-white text-sm">
-            <HelpCircle className="w-5 h-5 mr-2" /> Cara Main
+            <HelpCircle className="w-5 h-5 mr-2" /> Info
           </Button>
         </div>
         <div className="flex gap-2 md:gap-4">
-          {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED x2</Badge>}
-          <Badge color="bg-emerald-500">{difficulty}</Badge>
+          {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED</Badge>}
+          <Badge color="bg-emerald-500">{logicMode}</Badge>
           <Badge color="bg-cyan-500">Skor: {score}</Badge>
         </div>
       </div>

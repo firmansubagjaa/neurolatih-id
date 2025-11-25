@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, WordAssociationQuestion, GameResult, GameMode } from '../../types';
 import { generateWordAssociation } from '../../services/geminiService';
@@ -33,8 +34,16 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
   const [showConfetti, setShowConfetti] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
 
-  // GLOBAL TIMER STATE
-  const TOTAL_TIME = 50;
+  // Difficulty Scaling: Time Limit
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 60;
+      case Difficulty.INTERMEDIATE: return 45;
+      case Difficulty.ADVANCED: return 30;
+      default: return 60;
+    }
+  };
+  const TOTAL_TIME = getTimeLimit();
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
 
   const isMountedRef = useRef(true);

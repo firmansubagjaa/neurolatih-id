@@ -35,7 +35,17 @@ const NavigationGame: React.FC<NavigationGameProps> = ({ difficulty, onEndGame, 
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const TOTAL_TIME = 60;
+  // Difficulty Scaling: Time Limit
+  // Navigation is hard, give more time for Beginner
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 90;
+      case Difficulty.INTERMEDIATE: return 60;
+      case Difficulty.ADVANCED: return 45;
+      default: return 60;
+    }
+  };
+  const TOTAL_TIME = getTimeLimit();
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   const isMountedRef = useRef(true);
 
@@ -88,13 +98,13 @@ const NavigationGame: React.FC<NavigationGameProps> = ({ difficulty, onEndGame, 
     onEndGame({
       score: score,
       totalQuestions: rounds,
-      correctAnswers: score / 100,
+      correctAnswers: score / 100, // simplified scoring
       accuracy: 100, 
       duration: (TOTAL_TIME - timeLeft) * 1000,
       difficulty: difficulty,
       gameMode: GameMode.NAVIGATION
     });
-  }, [rounds, score, timeLeft, difficulty, onEndGame]);
+  }, [rounds, score, timeLeft, difficulty, onEndGame, TOTAL_TIME]);
 
   useEffect(() => {
     if (!isPracticeMode && introFinished && gameActive && !showTutorial && !showQuitModal && timeLeft > 0) {
@@ -119,7 +129,6 @@ const NavigationGame: React.FC<NavigationGameProps> = ({ difficulty, onEndGame, 
     } else {
         playSound('wrong');
         setScore(s => Math.max(0, s - 50));
-        // Keep same round until correct or time out? Let's just next round to keep flow
         nextRound();
     }
   };
@@ -161,7 +170,7 @@ const NavigationGame: React.FC<NavigationGameProps> = ({ difficulty, onEndGame, 
         title="Cara Bermain: Navigasi"
         content={[
             "Mulai menghadap arah awal.", 
-            ...(isQuickMode ? ["MODE CEPAT: Timer lebih agresif!"] : []), // Fixed bug
+            ...(isQuickMode ? ["MODE CEPAT: Timer lebih agresif!"] : []), 
             "Ikuti instruksi belok dalam pikiran.", 
             "Tentukan arah hadap TERAKHIR."
         ]}

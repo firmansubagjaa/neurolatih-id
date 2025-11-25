@@ -40,7 +40,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClos
         </div>
 
         <Button onClick={onClose} variant="secondary" className="w-full py-3 bg-retro-cyan text-black hover:bg-white hover:text-black font-bold">
-          <Play className="w-4 h-4 mr-2" /> SIAP, LAKSANAKAN!
+          <Play className="w-4 h-4 mr-2 text-black" /> <span className="font-pixel text-black">MULAI MISI</span>
         </Button>
       </div>
     </div>

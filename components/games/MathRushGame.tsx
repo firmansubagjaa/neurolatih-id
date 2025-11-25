@@ -31,7 +31,16 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const TOTAL_TIME = 45; // Speed game needs tight timer
+  // Difficulty Scaling: Time Limit
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 60;
+      case Difficulty.INTERMEDIATE: return 45;
+      case Difficulty.ADVANCED: return 30;
+      default: return 60;
+    }
+  };
+  const TOTAL_TIME = getTimeLimit(); 
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   
   const isMountedRef = useRef(true);
@@ -48,12 +57,15 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
 
   const generateProblem = () => {
     let num1, num2, op, ans;
-    const ops = ['+', '-', '*'];
     
-    // Difficulty logic
+    // Difficulty Scaling: Operations and Number Range
+    let ops = ['+', '-'];
+    if (difficulty === Difficulty.INTERMEDIATE) ops = ['+', '-', '*'];
+    if (difficulty === Difficulty.ADVANCED) ops = ['+', '-', '*', '/'];
+
     const limit = difficulty === Difficulty.BEGINNER ? 10 : difficulty === Difficulty.INTERMEDIATE ? 50 : 100;
     
-    op = ops[Math.floor(Math.random() * (difficulty === Difficulty.BEGINNER ? 2 : 3))]; // No multiply for beginner
+    op = ops[Math.floor(Math.random() * ops.length)];
     
     num1 = Math.floor(Math.random() * limit) + 2;
     num2 = Math.floor(Math.random() * limit) + 2;
@@ -62,14 +74,22 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
         if (num1 < num2) [num1, num2] = [num2, num1]; // Ensure positive
     }
     if (op === '*') {
-        num1 = Math.floor(Math.random() * 12) + 2; // Limit multiplication table
+        const multLimit = difficulty === Difficulty.INTERMEDIATE ? 10 : 12;
+        num1 = Math.floor(Math.random() * multLimit) + 2; 
+        num2 = Math.floor(Math.random() * multLimit) + 2;
+    }
+    if (op === '/') {
+        // Create clean division
         num2 = Math.floor(Math.random() * 12) + 2;
+        const result = Math.floor(Math.random() * 10) + 2;
+        num1 = num2 * result;
     }
 
     switch(op) {
         case '+': ans = num1 + num2; break;
         case '-': ans = num1 - num2; break;
         case '*': ans = num1 * num2; break;
+        case '/': ans = num1 / num2; break;
         default: ans = 0;
     }
 
@@ -103,7 +123,7 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
       difficulty: difficulty,
       gameMode: GameMode.MATH_RUSH
     });
-  }, [questionsAnswered, correctAnswers, score, timeLeft, difficulty, onEndGame]);
+  }, [questionsAnswered, correctAnswers, score, timeLeft, difficulty, onEndGame, TOTAL_TIME]);
 
   useEffect(() => {
     if (!isPracticeMode && introFinished && gameActive && !showTutorial && !showQuitModal && timeLeft > 0) {

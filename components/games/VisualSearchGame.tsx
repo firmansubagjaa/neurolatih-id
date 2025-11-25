@@ -43,7 +43,16 @@ const VisualSearchGame: React.FC<VisualSearchGameProps> = ({ difficulty, onEndGa
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const TOTAL_TIME = 40;
+  // Difficulty Scaling: Time Limit
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 60;
+      case Difficulty.INTERMEDIATE: return 45;
+      case Difficulty.ADVANCED: return 30;
+      default: return 60;
+    }
+  };
+  const TOTAL_TIME = getTimeLimit();
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   const isMountedRef = useRef(true);
 
@@ -58,7 +67,14 @@ const VisualSearchGame: React.FC<VisualSearchGameProps> = ({ difficulty, onEndGa
   }, []);
 
   const startLevel = () => {
-    const size = difficulty === Difficulty.BEGINNER ? 4 : difficulty === Difficulty.INTERMEDIATE ? 5 : 6;
+    // Progressive grid size based on level and difficulty
+    const baseSize = difficulty === Difficulty.BEGINNER ? 3 : difficulty === Difficulty.INTERMEDIATE ? 4 : 5;
+    const maxSize = difficulty === Difficulty.BEGINNER ? 5 : difficulty === Difficulty.INTERMEDIATE ? 6 : 8;
+    
+    // Increase size every 3 levels
+    const growth = Math.floor((level - 1) / 3);
+    const size = Math.min(maxSize, baseSize + growth);
+    
     setGridSize(size);
     
     const set = EMOJI_SETS[Math.floor(Math.random() * EMOJI_SETS.length)];
@@ -80,13 +96,13 @@ const VisualSearchGame: React.FC<VisualSearchGameProps> = ({ difficulty, onEndGa
     onEndGame({
       score: score,
       totalQuestions: level,
-      correctAnswers: level - 1, // simplified
+      correctAnswers: level - 1, 
       accuracy: 100, 
       duration: (TOTAL_TIME - timeLeft) * 1000,
       difficulty: difficulty,
       gameMode: GameMode.VISUAL_SEARCH
     });
-  }, [level, score, timeLeft, difficulty, onEndGame]);
+  }, [level, score, timeLeft, difficulty, onEndGame, TOTAL_TIME]);
 
   useEffect(() => {
     if (!isPracticeMode && introFinished && gameActive && !showTutorial && !showQuitModal && timeLeft > 0) {
@@ -142,7 +158,7 @@ const VisualSearchGame: React.FC<VisualSearchGameProps> = ({ difficulty, onEndGa
         title="Cara Bermain: Mata Elang"
         content={[
             "Cari satu simbol yang berbeda.", 
-            ...(isQuickMode ? ["MODE CEPAT: Waktu berjalan lebih cepat!"] : []), // Fixed bug
+            ...(isQuickMode ? ["MODE CEPAT: Waktu berjalan lebih cepat!"] : []), 
             "Grid akan semakin padat.", 
             "Kecepatan adalah kunci."
         ]}
@@ -174,7 +190,7 @@ const VisualSearchGame: React.FC<VisualSearchGameProps> = ({ difficulty, onEndGa
                 <button 
                     key={i} 
                     onClick={() => handleClick(i)}
-                    className="w-full h-full bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center font-mono text-2xl md:text-4xl text-white transition-colors active:scale-95"
+                    className="w-full h-full bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center font-mono text-2xl md:text-3xl text-white transition-colors active:scale-95"
                 >
                     {item}
                 </button>

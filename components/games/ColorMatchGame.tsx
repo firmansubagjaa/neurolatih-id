@@ -45,8 +45,16 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
   // MISTAKE TRACKER
   const mistakeTracker = useRef<string[]>([]);
 
-  // Timer
-  const TOTAL_TIME = 45;
+  // Difficulty Scaling: Time Limit
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 60;
+      case Difficulty.INTERMEDIATE: return 45;
+      case Difficulty.ADVANCED: return 30;
+      default: return 45;
+    }
+  };
+  const TOTAL_TIME = getTimeLimit();
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   
   // Audio & Timer Refs
@@ -83,7 +91,7 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
       gameMode: GameMode.COLOR_MATCH,
       mistakePatterns: mistakeTracker.current
     });
-  }, [questionsAnswered, correctAnswers, score, timeLeft, difficulty, onEndGame]);
+  }, [questionsAnswered, correctAnswers, score, timeLeft, difficulty, onEndGame, TOTAL_TIME]);
 
   // 3. Timer Tick
   useEffect(() => {
@@ -109,8 +117,13 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
     const wordIdx = Math.floor(Math.random() * COLORS.length);
     let colorIdx = Math.floor(Math.random() * COLORS.length);
     
-    // Ensure Stroop effect (mismatch) happens frequently for training
-    if (Math.random() > 0.2 && colorIdx === wordIdx) {
+    // Difficulty Scaling: Interference Probability
+    let interferenceChance = 0.5;
+    if (difficulty === Difficulty.BEGINNER) interferenceChance = 0.3;
+    if (difficulty === Difficulty.ADVANCED) interferenceChance = 0.8;
+
+    // Ensure Stroop effect (mismatch) happens frequently based on difficulty
+    if (Math.random() < interferenceChance && colorIdx === wordIdx) {
         colorIdx = (colorIdx + 1) % COLORS.length;
     }
 

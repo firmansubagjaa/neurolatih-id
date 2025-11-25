@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, AIQuestion, GameResult, GameMode } from '../../types';
 import { generateRiddle } from '../../services/geminiService';
@@ -31,7 +32,17 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
   const [showConfetti, setShowConfetti] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
   
-  const TOTAL_TIME = 50;
+  // Difficulty Scaling: Time Limit
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 60;
+      case Difficulty.INTERMEDIATE: return 45;
+      case Difficulty.ADVANCED: return 30;
+      default: return 60;
+    }
+  };
+  
+  const TOTAL_TIME = getTimeLimit();
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   
   const isMountedRef = useRef(true);

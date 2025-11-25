@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense } from 'react';
 import { GameMode, Difficulty, GameResult, User, FontSize, Language } from './types';
 import { Button, Card, NeuralLoader, Toggle, Badge, Tooltip } from './components/Shared';
@@ -12,7 +11,7 @@ import { generateGameFeedback, generateWelcomeMessage } from './services/geminiS
 import { startMusic, stopMusic, playSound, toggleMute, getIsMuted } from './services/audioService';
 import { loginWithGoogle, logout, getCurrentUser, saveGameResult } from './services/authService';
 import { getTranslation } from './services/languageService';
-import { Brain, Zap, Network, Trophy, Lightbulb, Grid, Activity, BookOpen, Settings, RotateCcw, BrainCircuit, Eye, LogOut, Terminal, Calculator, Type, Scan, Compass, Shuffle, Volume2, VolumeX, Map, User as UserIcon } from 'lucide-react';
+import { Brain, Zap, Network, Trophy, Lightbulb, Grid, Activity, BookOpen, Settings, RotateCcw, BrainCircuit, Eye, LogOut, Terminal, Calculator, Type, Scan, Compass, Shuffle, Volume2, VolumeX, Map, User as UserIcon, Star } from 'lucide-react';
 
 const LogicGame = React.lazy(() => import('./components/games/LogicGame'));
 const MemoryGame = React.lazy(() => import('./components/games/MemoryGame'));
@@ -154,55 +153,61 @@ const App: React.FC = () => {
       case GameMode.MENU:
         return (
           <div className="w-full max-w-6xl mx-auto animate-fade-in pb-20">
-            {/* Header Redesign: Dashboard Style */}
-            <div className="mt-20 md:mt-0 mb-8">
-                {/* ID Card / Status Bar */}
-                <div className="bg-slate-900 border-2 border-slate-600 p-4 shadow-retro mb-6 flex flex-col md:flex-row justify-between items-center gap-4 relative overflow-hidden group">
-                    {/* Scanline Effect */}
-                    <div className="absolute top-0 left-0 w-full h-1 bg-white/10 animate-[scanline_3s_linear_infinite] pointer-events-none"></div>
+            {/* --- NEW DASHBOARD HEADER --- */}
+            <div className="mt-16 mb-8">
+                {/* 1. Status Bar Container */}
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    
+                    {/* Left: User Identity Module */}
+                    <div className="flex-1 bg-slate-900 border-2 border-slate-600 p-3 shadow-retro flex items-center gap-4 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-1">
+                             <div className="flex gap-1">
+                                 <div className="w-2 h-2 rounded-full bg-retro-red animate-pulse"></div>
+                                 <div className="w-2 h-2 rounded-full bg-retro-yellow animate-pulse delay-75"></div>
+                                 <div className="w-2 h-2 rounded-full bg-retro-green animate-pulse delay-150"></div>
+                             </div>
+                        </div>
 
-                    {/* Left: User Identity */}
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                         <div className="w-12 h-12 bg-retro-yellow border-2 border-white shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center justify-center shrink-0">
-                              <UserIcon className="w-7 h-7 text-black" />
-                         </div>
-                         <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-retro-green font-pixel uppercase tracking-widest bg-retro-green/10 px-1 rounded">OPERATOR_ID</span>
-                                  <div className="w-2 h-2 rounded-full bg-retro-green animate-pulse shadow-[0_0_5px_#4ade80]"></div>
-                              </div>
-                              <span className="text-xl text-white font-bold font-mono tracking-wider text-shadow-retro truncate max-w-[200px] md:max-w-none">
-                                  {user?.name || 'UNKNOWN'}
-                              </span>
-                         </div>
+                        <div className="w-14 h-14 bg-retro-yellow border-2 border-white flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                             <UserIcon className="w-8 h-8 text-black" />
+                        </div>
+                        
+                        <div className="flex flex-col justify-center">
+                             <span className="text-[10px] text-retro-cyan font-pixel uppercase tracking-widest mb-1">OPERATOR_ID</span>
+                             <span className="text-xl text-white font-bold font-mono tracking-wide truncate max-w-[150px] md:max-w-[200px]">
+                                 {user?.name || 'GUEST_USER'}
+                             </span>
+                             <div className="flex items-center gap-2 mt-1">
+                                 <div className="w-2 h-2 bg-retro-green rounded-full animate-pulse"></div>
+                                 <span className="text-[10px] text-retro-green font-mono">NEURAL LINK ACTIVE</span>
+                             </div>
+                        </div>
                     </div>
 
-                    {/* Right: Credits & Stats */}
-                    <div className="flex items-center gap-4 w-full md:w-auto bg-black/40 p-2 px-4 rounded border border-slate-700/50 backdrop-blur-sm">
-                         <div className="flex flex-col items-end border-r border-slate-600 pr-4">
-                             <span className="text-[10px] text-slate-400 font-pixel uppercase">STATUS</span>
-                             <span className="text-xs text-retro-green font-mono tracking-wide">SYSTEM ONLINE</span>
-                         </div>
-                         <div className="flex flex-col items-end">
-                             <span className="text-[10px] text-retro-cyan font-pixel uppercase">CREDITS</span>
-                             <div className="flex items-center gap-1">
-                                 <span className="text-lg text-retro-cyan font-bold font-mono leading-none">∞</span>
-                                 <span className="text-[10px] text-retro-cyan/70">PTS</span>
+                    {/* Right: Credits / System Stats Module */}
+                    <div className="flex-1 bg-black border-2 border-slate-700 p-3 shadow-retro flex justify-between items-center relative">
+                        <div className="flex flex-col pl-2 border-l-4 border-retro-pink">
+                             <span className="text-[10px] text-slate-400 font-pixel uppercase">CREDITS</span>
+                             <div className="flex items-center gap-2">
+                                 <Star className="w-4 h-4 text-retro-pink fill-retro-pink" />
+                                 <span className="text-lg text-white font-mono font-bold">UNLIMITED</span>
                              </div>
-                         </div>
+                        </div>
+                        <div className="flex flex-col items-end pr-2">
+                             <span className="text-[10px] text-slate-400 font-pixel uppercase">SERVER TIME</span>
+                             <span className="text-sm text-retro-green font-mono">
+                                 {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                             </span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Main Title Section */}
-                <div className="flex items-end justify-between border-b-4 border-white pb-2 px-1">
-                     <h1 className="text-4xl md:text-6xl font-pixel text-white text-shadow-retro leading-none mt-2">
+                {/* 2. Main Title Separator */}
+                <div className="relative border-b-4 border-white mb-6 pb-2">
+                     <h1 className="text-4xl md:text-6xl font-pixel text-white text-shadow-retro leading-none tracking-tight">
                         {t('mainMenu')}
                      </h1>
-                     <div className="hidden md:flex gap-1 mb-2 opacity-50">
-                         <div className="w-2 h-2 bg-slate-500"></div>
-                         <div className="w-2 h-2 bg-slate-500"></div>
-                         <div className="w-2 h-2 bg-slate-500"></div>
-                     </div>
+                     <span className="absolute bottom-1 right-0 text-xs font-mono text-slate-500 bg-black px-2">V.8.0.1</span>
                 </div>
             </div>
 

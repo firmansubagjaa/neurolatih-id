@@ -38,7 +38,16 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
   const [showConfetti, setShowConfetti] = useState(false);
   const [feedback, setFeedback] = useState<'CORRECT' | 'WRONG' | null>(null);
 
-  const TOTAL_TIME = 45;
+  // Difficulty Scaling: Time Limit
+  const getTimeLimit = () => {
+    switch (difficulty) {
+      case Difficulty.BEGINNER: return 60;
+      case Difficulty.INTERMEDIATE: return 45;
+      case Difficulty.ADVANCED: return 30;
+      default: return 45;
+    }
+  };
+  const TOTAL_TIME = getTimeLimit();
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   const isMountedRef = useRef(true);
 
@@ -98,7 +107,7 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
       gameMode: GameMode.TASK_SWITCH,
       mistakePatterns: mistakeTracker.current
     });
-  }, [questionsAnswered, correctAnswers, score, timeLeft, difficulty, onEndGame]);
+  }, [questionsAnswered, correctAnswers, score, timeLeft, difficulty, onEndGame, TOTAL_TIME]);
 
   useEffect(() => {
     if (!isPracticeMode && introFinished && gameActive && !showTutorial && !showQuitModal && timeLeft > 0) {
@@ -184,7 +193,7 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
           "Perhatikan PERINTAH di atas kartu.",
           "Jika perintahnya 'HURUF VOKAL?', jawab YA jika hurufnya A/I/U/E/O.",
           "Jika perintahnya 'ANGKA GENAP?', jawab YA jika angkanya 2/4/6/8.",
-          ...(isQuickMode ? ["MODE CEPAT: Aturan berubah lebih sering!"] : []), // Fixed bug
+          ...(isQuickMode ? ["MODE CEPAT: Aturan berubah lebih sering!"] : []), 
           "Waspada! Perintah berubah tiba-tiba."
         ]}
         icon={<Shuffle className="w-6 h-6" />}

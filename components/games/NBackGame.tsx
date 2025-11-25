@@ -55,7 +55,17 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
   const TOTAL_TIME = 60;
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   
-  const STIMULUS_DURATION = 2000;
+  // Difficulty Scaling: Stimulus Duration
+  const getStimulusDuration = () => {
+      switch (difficulty) {
+          case Difficulty.BEGINNER: return 2500;
+          case Difficulty.INTERMEDIATE: return 2000;
+          case Difficulty.ADVANCED: return 1500;
+          default: return 2500;
+      }
+  };
+  const STIMULUS_DURATION = getStimulusDuration();
+  
   const stimulusTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
 
@@ -146,7 +156,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
             stimulusTimerRef.current = null;
         }
     };
-  }, [introFinished, gameActive, showTutorial, showQuitModal, N_VALUE]);
+  }, [introFinished, gameActive, showTutorial, showQuitModal, N_VALUE, STIMULUS_DURATION]);
 
   const handleResponse = (isMatch: boolean) => {
     if (currentIndex < N_VALUE || feedback !== null || (!isPracticeMode && timeLeft <= 0)) return;
