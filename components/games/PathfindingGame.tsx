@@ -40,7 +40,7 @@ interface SavedGame {
   mazeType: MazeType;
 }
 
-const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false, language = 'ID' }) => {
+const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false, language = 'ID' as Language }) => {
   const t = (key: string) => getTranslation(language, `pathfinding.${key}`);
   
   // View State: SELECT (Menu) or GAME (Playing)
@@ -633,7 +633,7 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
                 
                 {isDebugMode ? (
                      <div className="flex flex-col gap-1 text-retro-green">
-                        {debugLogs.length === 0 && <span className="animate-pulse">> WAITING...</span>}
+                        {debugLogs.length === 0 && <span className="animate-pulse"> WAITING...</span>}
                         {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
                      </div>
                 ) : (
