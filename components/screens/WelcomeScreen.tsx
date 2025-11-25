@@ -1,0 +1,38 @@
+
+import React from 'react';
+import { Button } from '../ui/Button';
+
+interface WelcomeScreenProps {
+  onStart: () => void;
+  text: {
+    welcome: string;
+    startSystem: string;
+  };
+}
+
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, text }) => {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center animate-fade-in px-4">
+      <div className="mb-12 relative group">
+          <div className="bg-black border-4 border-white p-6 md:p-10 shadow-retro-lg transform group-hover:-translate-y-2 transition-transform">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-pixel text-retro-green mb-4 text-shadow-retro leading-none">
+              NEUROLATIH
+            </h1>
+            <div className="inline-block bg-retro-red px-3 py-1 border-2 border-white">
+              <p className="text-sm md:text-lg font-pixel text-white font-bold tracking-[0.5em]">8-BIT EDITION</p>
+            </div>
+          </div>
+      </div>
+      
+      <div className="max-w-md text-slate-300 mb-10 font-mono text-base md:text-xl leading-relaxed bg-black border-2 border-slate-600 p-6 w-full shadow-retro text-left">
+        <span className="text-retro-green mr-2">$</span>
+        <span className="typing-effect">{text.welcome}</span>
+        <span className="animate-blink inline-block w-3 h-5 bg-retro-green ml-1 align-middle"></span>
+      </div>
+
+      <Button onClick={onStart} className="text-xl md:text-2xl py-5 px-10 border-4 animate-pulse-fast hover:animate-none">
+          {text.startSystem}
+      </Button>
+    </div>
+  );
+};

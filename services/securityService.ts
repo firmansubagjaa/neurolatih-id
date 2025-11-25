@@ -25,6 +25,20 @@ interface SecurePayload {
   t: number; // Timestamp (Replay Attack Prevention)
 }
 
+// --- HELPER: UNICODE SAFE BASE64 ---
+// Native btoa/atob only supports Latin1. We need to encode UTF-8 bytes first.
+const utf8_to_b64 = (str: string): string => {
+  const bytes = new TextEncoder().encode(str);
+  const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+  return btoa(binString);
+};
+
+const b64_to_utf8 = (str: string): string => {
+  const binString = atob(str);
+  const bytes = Uint8Array.from(binString, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+};
+
 // --- ENCRYPTION (Obfuscation + Signing) ---
 export const encryptData = (data: any): string => {
   try {
@@ -37,9 +51,9 @@ export const encryptData = (data: any): string => {
       t: Date.now()
     };
 
-    // Double encoding: JSON -> Base64
-    // This makes it unreadable to casual users in DevTools
-    return INTEGRITY_PREFIX + btoa(JSON.stringify(payload));
+    // Double encoding: JSON -> Base64 (Unicode Safe)
+    // This makes it unreadable to casual users in DevTools and supports emojis
+    return INTEGRITY_PREFIX + utf8_to_b64(JSON.stringify(payload));
   } catch (e) {
     console.error("Encryption failed", e);
     return "";
@@ -59,8 +73,8 @@ export const decryptData = <T>(cipherText: string): T | null => {
       }
     }
 
-    // 2. Decode Base64
-    const rawPayload = atob(cipherText.replace(INTEGRITY_PREFIX, ''));
+    // 2. Decode Base64 (Unicode Safe)
+    const rawPayload = b64_to_utf8(cipherText.replace(INTEGRITY_PREFIX, ''));
     const payload: SecurePayload = JSON.parse(rawPayload);
 
     // 3. Verify Structure
@@ -77,7 +91,7 @@ export const decryptData = <T>(cipherText: string): T | null => {
 
     return payload.d as T;
   } catch (e) {
-    console.error("Decryption failed", e);
+    // console.error("Decryption failed", e); // Silent fail to avoid console spam on bad data
     return null;
   }
 };
@@ -86,14 +100,15 @@ export const decryptData = <T>(cipherText: string): T | null => {
 export const runSecurityUnitTests = () => {
   console.log("%c[SEC] Running Security Unit Tests...", "color: #00ffff");
   
-  const testData = { xp: 1000, level: 5, user: "TEST_PLAYER" };
+  // Test Unicode support (Emoji & Indonesian Chars)
+  const testData = { xp: 1000, level: 5, user: "TEST_PLAYER_🚀_🇮🇩" };
   
   // Test 1: Encryption -> Decryption
   const encrypted = encryptData(testData);
   const decrypted = decryptData<typeof testData>(encrypted);
   
   if (JSON.stringify(testData) === JSON.stringify(decrypted)) {
-    console.log("%c[PASS] Integrity Cycle OK", "color: #4ade80");
+    console.log("%c[PASS] Integrity Cycle OK (Unicode Supported)", "color: #4ade80");
   } else {
     console.error("[FAIL] Integrity Cycle Failed");
   }
@@ -101,12 +116,12 @@ export const runSecurityUnitTests = () => {
   // Test 2: Tamper Resistance
   // Decode, modify payload, re-encode with WRONG hash logic (mimicking user editing base64)
   try {
-    const raw = atob(encrypted.replace(INTEGRITY_PREFIX, ''));
+    const raw = b64_to_utf8(encrypted.replace(INTEGRITY_PREFIX, ''));
     const payload = JSON.parse(raw);
     payload.d.xp = 999999; // Cheat!
     // User saves this back without updating 'h' correctly because they don't know the SALT
     const tamperedPayload = JSON.stringify(payload);
-    const tamperedCipher = INTEGRITY_PREFIX + btoa(tamperedPayload);
+    const tamperedCipher = INTEGRITY_PREFIX + utf8_to_b64(tamperedPayload);
     
     const result = decryptData(tamperedCipher);
     if (result === null) {

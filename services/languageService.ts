@@ -50,6 +50,7 @@ const DICTIONARY = {
       debug: "DEBUG",
       goal: "CAPAI BENDERA",
       avoidWalls: "HINDARI TEMBOK",
+      tutorialTitle: "CARA BERMAIN",
       missions: {
         random: "ACAK (Klasik)",
         labyrinth: "LABIRIN (DFS)",
@@ -107,6 +108,7 @@ const DICTIONARY = {
       debug: "DEBUG",
       goal: "REACH THE FLAG",
       avoidWalls: "AVOID WALLS",
+      tutorialTitle: "HOW TO PLAY",
       missions: {
         random: "RANDOM (Classic)",
         labyrinth: "THE LABYRINTH (DFS)",

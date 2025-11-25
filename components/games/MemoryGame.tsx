@@ -6,9 +6,8 @@ import { Button, Card, Badge, Tooltip } from '../Shared';
 import { TutorialOverlay } from '../TutorialOverlay';
 import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
-import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { Grid, HelpCircle, Gauge, Zap, BrainCircuit, ListOrdered, Camera } from 'lucide-react';
+import { Grid, HelpCircle, Gauge, BrainCircuit, ListOrdered, Camera, Zap } from 'lucide-react';
 
 interface MemoryGameProps {
   difficulty: Difficulty;
@@ -38,6 +37,7 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
   const [showConfetti, setShowConfetti] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<SpeedOption>('SEDANG');
 
+  // Timer Logic
   const getTimeLimit = () => {
       switch (difficulty) {
           case Difficulty.BEGINNER: return 45;
@@ -188,11 +188,14 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
                  <Badge color="bg-retro-pink">PATTERN RECALL</Badge>
              </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 {[{ id: 'SPATIAL', name: "SPATIAL", icon: <Grid /> }, { id: 'SERIAL', name: "SERIAL", icon: <ListOrdered /> }, { id: 'FLASH', name: "FLASH", icon: <Camera /> }].map((m) => (
-                     <Card key={m.id} onClick={() => startGame(m.id as MemorySubMode)} className="cursor-pointer hover:border-retro-pink hover:-translate-y-1 transition-all group">
-                         <div className="flex items-center gap-3 mb-2">
-                             <div className="text-retro-pink">{m.icon}</div>
-                             <h3 className="font-pixel text-sm">{m.name}</h3>
+                 {[{ id: 'SPATIAL', name: "SPATIAL", icon: <Grid />, desc: "Simultaneous pattern" }, { id: 'SERIAL', name: "SERIAL", icon: <ListOrdered />, desc: "Sequential order" }, { id: 'FLASH', name: "FLASH", icon: <Camera />, desc: "Quick exposure" }].map((m) => (
+                     <Card key={m.id} onClick={() => startGame(m.id as MemorySubMode)} className="cursor-pointer hover:border-retro-pink hover:-translate-y-1 transition-all group p-6 border-4">
+                         <div className="flex flex-col items-center gap-3 text-center">
+                             <div className="p-3 bg-slate-800 rounded-full text-retro-pink group-hover:scale-110 transition-transform">{m.icon}</div>
+                             <div>
+                                <h3 className="font-pixel text-lg text-white mb-1">{m.name}</h3>
+                                <p className="text-xs text-slate-400 font-mono uppercase">{m.desc}</p>
+                             </div>
                          </div>
                      </Card>
                  ))}
@@ -202,73 +205,123 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto relative h-[calc(100vh-100px)] flex flex-col">
+    <div className="w-full h-[calc(100vh-80px)] flex flex-col max-w-4xl mx-auto px-2 md:px-0 relative">
       {!introFinished && <GameIntro gameMode={GameMode.MEMORY} onStart={() => { playSound('click'); setIntroFinished(true); setShowTutorial(true); }} />}
       {showConfetti && <Confetti />}
       <TutorialOverlay isOpen={showTutorial} onClose={() => setShowTutorial(false)} title={`Cara Bermain: ${subMode}`} content={["Hafalkan pola.", "Ulangi pola.", "Jangan sampai salah."]} icon={<BrainCircuit className="w-6 h-6" />} />
       <QuitModal isOpen={showQuitModal} onConfirm={() => { setShowQuitModal(false); onBack(); }} onCancel={() => setShowQuitModal(false)} />
 
-      <div className="flex justify-between items-center mb-2 shrink-0">
-        <div className="flex gap-1 items-center">
-          <Button variant="ghost" onClick={() => isPracticeMode ? handleFinish(true) : setShowQuitModal(true)} className="!px-2 text-xs">&larr; Mode</Button>
-          <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400"><HelpCircle className="w-4 h-4" /></Button>
+      {/* HEADER BAR */}
+      <div className="flex justify-between items-center mb-2 p-3 bg-slate-900/90 border-b-2 border-slate-700 rounded-t-xl backdrop-blur-sm shadow-md z-20 shrink-0">
+        <div className="flex gap-3 items-center">
+          <Button variant="ghost" onClick={() => isPracticeMode ? handleFinish(true) : setShowQuitModal(true)} className="!px-2 text-xs !py-1 text-slate-400 hover:text-white">&larr; EXIT</Button>
+          <div className="h-4 w-px bg-slate-700"></div>
           {subMode !== 'FLASH' && !isQuickMode && (
-             <div className="hidden md:flex items-center gap-1 bg-slate-900/50 p-1 px-2 border border-white/10">
-                <Gauge className="w-3 h-3 text-neuro-400" />
-                <select value={playbackSpeed} onChange={(e) => setPlaybackSpeed(e.target.value as SpeedOption)} className="bg-transparent text-xs font-bold text-slate-300 focus:outline-none">
-                  <option value="LAMBAT" className="bg-slate-800">Lambat</option>
-                  <option value="SEDANG" className="bg-slate-800">Sedang</option>
-                  <option value="CEPAT" className="bg-slate-800">Cepat</option>
+             <div className="hidden md:flex items-center gap-1">
+                <Gauge className="w-3 h-3 text-slate-500" />
+                <select value={playbackSpeed} onChange={(e) => setPlaybackSpeed(e.target.value as SpeedOption)} className="bg-transparent text-[10px] font-bold text-slate-400 focus:outline-none font-pixel uppercase cursor-pointer hover:text-white">
+                  <option value="LAMBAT" className="bg-black">SLOW</option>
+                  <option value="SEDANG" className="bg-black">NORM</option>
+                  <option value="CEPAT" className="bg-black">FAST</option>
                 </select>
              </div>
           )}
         </div>
-        <div className="flex gap-1">
-           <Badge color="bg-pink-500">Lvl {level}</Badge>
-           <Badge color="bg-neuro-500">{isPracticeMode ? '∞' : '❤️'.repeat(Math.max(0, lives))}</Badge>
+        
+        <div className="flex gap-4 items-center">
+           <Badge color="bg-pink-500 text-black border-pink-700">LVL {level}</Badge>
+           <div className="flex gap-1 items-center bg-black/40 px-2 py-1 rounded-full border border-slate-700">
+             {Array.from({length: 3}).map((_, i) => (
+                <div key={i} className={`w-3 h-3 rounded-full transition-all duration-300 ${i < lives ? 'bg-retro-red shadow-[0_0_8px_rgba(248,113,113,0.8)]' : 'bg-slate-800'}`}></div>
+             ))}
+           </div>
         </div>
       </div>
 
-      <Card className="flex-1 flex flex-col items-center relative overflow-hidden w-full p-4 bg-black border-2 border-slate-700 min-h-0">
-        <div className="w-full shrink-0"><CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} /></div>
+      {/* MAIN GAME AREA (Neural Grid) */}
+      <div className="flex-1 relative bg-black border-x-2 border-b-2 border-slate-800 rounded-b-xl overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] z-10">
+        
+        {/* Background Grid Texture */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none" 
+             style={{ backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+        </div>
 
-        <div className="mb-2 text-center shrink-0">
-          <h3 className={`text-xl md:text-3xl font-pixel transition-colors text-shadow-retro ${gameState === 'MEMORIZE' ? 'text-retro-green animate-pulse' : 'text-white'}`}>
-            {gameState === 'PREPARE' && "READY..."}
-            {gameState === 'MEMORIZE' && "MEMORIZE"}
-            {gameState === 'RECALL' && "REPEAT"}
+        {/* Progress Line */}
+        <div className="w-full h-1 bg-slate-900 relative">
+            <div className="h-full bg-gradient-to-r from-retro-pink to-purple-500 transition-all duration-300 shadow-[0_0_10px_rgba(236,72,153,0.5)]" style={{ width: `${(timeLeft / TOTAL_TIME) * 100}%` }}></div>
+        </div>
+
+        {/* Status Text */}
+        <div className="text-center py-4 shrink-0 z-10 relative">
+          <h3 className={`text-2xl md:text-3xl font-pixel tracking-widest transition-all duration-300 ${
+              gameState === 'MEMORIZE' ? 'text-white animate-pulse drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 
+              gameState === 'RECALL' ? 'text-retro-pink drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]' : 'text-slate-500'
+          }`}>
+            {gameState === 'PREPARE' && "INITIALIZING..."}
+            {gameState === 'MEMORIZE' && (subMode === 'SERIAL' ? "OBSERVE SEQUENCE" : "MEMORIZE PATTERN")}
+            {gameState === 'RECALL' && "RECALL PATTERN"}
+            {gameState === 'RESULT' && "COMPLETE"}
           </h3>
         </div>
 
         {/* Responsive Grid Container */}
-        <div className="flex-1 w-full flex items-center justify-center min-h-0 overflow-hidden">
+        <div className="flex-1 flex items-center justify-center p-4 min-h-0 z-10 relative">
             <div 
-            className="grid gap-1 md:gap-2 bg-slate-900 p-2 border-2 border-slate-600 aspect-square h-full max-h-full"
-            style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)`, gridTemplateRows: `repeat(${gridSize}, 1fr)` }}
+                className="grid gap-2 md:gap-3 transition-all duration-300 ease-out"
+                style={{ 
+                    // This logic maximizes the grid size based on available space while maintaining aspect ratio
+                    width: 'min(100%, 65vh)', 
+                    height: 'min(100%, 65vh)',
+                    aspectRatio: '1 / 1',
+                    gridTemplateColumns: `repeat(${gridSize}, 1fr)`, 
+                    gridTemplateRows: `repeat(${gridSize}, 1fr)` 
+                }}
             >
             {Array.from({ length: gridSize * gridSize }).map((_, i) => {
-                let cellClass = "w-full h-full transition-all duration-100 border border-slate-600/50 ";
+                let cellStyle = "relative w-full h-full rounded-lg border transition-all duration-150 flex items-center justify-center font-pixel text-xl md:text-3xl ";
                 let content = null;
+                const isTarget = subMode === 'SERIAL' ? targetCells[displayIndex] === i : targetCells.includes(i);
                 
                 if (gameState === 'MEMORIZE') {
-                    const isTarget = subMode === 'SERIAL' ? targetCells[displayIndex] === i : targetCells.includes(i);
-                    if (isTarget) cellClass += "bg-white border-white shadow-[0_0_10px_white] z-10 scale-95";
-                    else cellClass += "bg-slate-800 opacity-40";
+                    if (isTarget) {
+                        cellStyle += "bg-white border-white shadow-[0_0_20px_rgba(255,255,255,0.9)] scale-95 md:scale-100 z-20"; 
+                        if (subMode === 'SERIAL') content = <span className="text-black font-bold">{targetCells.indexOf(i) + 1}</span>;
+                    } else {
+                        cellStyle += "bg-slate-900/50 border-slate-700 opacity-50"; 
+                    }
                 } else if (gameState === 'RECALL') {
                     if (selectedCells.includes(i)) {
                         const isCorrect = targetCells.includes(i); 
-                        cellClass += isCorrect ? "bg-emerald-500 border-emerald-300" : "bg-red-500 border-red-300 animate-shake";
-                        if (subMode === 'SERIAL' && isCorrect) content = <span className="font-pixel text-black font-bold text-lg">{selectedCells.indexOf(i) + 1}</span>;
+                        if (isCorrect) {
+                             cellStyle += "bg-retro-green border-emerald-400 shadow-[0_0_25px_rgba(74,222,128,0.6)] z-20 scale-105 text-black";
+                             if (subMode === 'SERIAL') content = <span className="font-bold">{selectedCells.indexOf(i) + 1}</span>;
+                             else content = <div className="w-1/2 h-1/2 bg-black/20 rounded-full animate-ping"></div>;
+                        } else {
+                             cellStyle += "bg-retro-red border-red-400 shadow-[0_0_25px_rgba(248,113,113,0.6)] animate-shake z-20 text-white";
+                             content = "X";
+                        }
                     } else {
-                        cellClass += "bg-slate-800 hover:bg-slate-700 active:bg-slate-600 cursor-pointer";
+                        // Interactive cell styling
+                        cellStyle += "bg-slate-900/80 border-slate-600 hover:border-retro-pink hover:bg-slate-800 cursor-pointer active:scale-95 hover:shadow-[0_0_15px_rgba(244,114,182,0.3)]";
                     }
-                } else cellClass += "bg-slate-800";
+                } else {
+                    cellStyle += "bg-slate-900 border-slate-800";
+                }
 
-                return <div key={i} className={`flex items-center justify-center ${cellClass}`} onClick={() => handleCellClick(i)}>{content}</div>;
+                return (
+                    <button 
+                        key={i} 
+                        className={cellStyle} 
+                        onClick={() => handleCellClick(i)}
+                        disabled={gameState !== 'RECALL'}
+                    >
+                        {content}
+                    </button>
+                );
             })}
             </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

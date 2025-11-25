@@ -5,13 +5,14 @@ interface CountdownBarProps {
   totalTime: number; 
   timeLeft: number;  
   isPracticeMode?: boolean;
+  className?: string;
 }
 
-export const CountdownBar: React.FC<CountdownBarProps> = React.memo(({ totalTime, timeLeft, isPracticeMode = false }) => {
+export const CountdownBar: React.FC<CountdownBarProps> = React.memo(({ totalTime, timeLeft, isPracticeMode = false, className = "mb-6" }) => {
   
   if (isPracticeMode) {
     return (
-      <div className="w-full mb-6 border-2 border-retro-cyan bg-black p-2">
+      <div className={`w-full border-2 border-retro-cyan bg-black p-2 ${className}`}>
          <div className="flex justify-between items-center mb-1 font-pixel text-[10px] text-retro-cyan">
             <span>MODE: LATIHAN</span>
             <InfinityIcon className="w-4 h-4 animate-pulse" />
@@ -36,7 +37,7 @@ export const CountdownBar: React.FC<CountdownBarProps> = React.memo(({ totalTime
   };
 
   return (
-    <div className="w-full mb-6 border-4 border-slate-700 bg-black p-1">
+    <div className={`w-full border-4 border-slate-700 bg-black p-1 ${className}`}>
       <div className="flex justify-between items-center mb-2 px-1">
         <div className="flex items-center gap-2 text-white font-pixel text-[10px]">
             <Timer className="w-3 h-3" />

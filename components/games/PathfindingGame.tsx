@@ -3,13 +3,17 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Difficulty, GameResult, GameMode, Language } from '../../types';
 import { startMusic, stopMusic, playSound } from '../../services/audioService';
 import { getTranslation } from '../../services/languageService';
-import { Button, Card, Badge, Toggle } from '../Shared';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { Badge } from '../ui/Badge';
+import { Toggle } from '../ui/Toggle';
+import { Tooltip } from '../ui/Tooltip';
 import { TutorialOverlay } from '../TutorialOverlay';
 import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { Map, HelpCircle, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCcw, Zap, Flag, Cpu, Play, Grid, Database, Bot, Trash2 } from 'lucide-react';
+import { Map, HelpCircle, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCcw, Zap, Flag, Cpu, Play, Grid, Database, Bot, Trash2, Terminal } from 'lucide-react';
 
 interface PathfindingGameProps {
   difficulty: Difficulty;
@@ -24,10 +28,7 @@ type CellType = 'EMPTY' | 'WALL' | 'START' | 'END';
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 type MazeType = 'RANDOM' | 'LABYRINTH' | 'BUNKER' | 'BINARY' | 'OBSTACLE';
 
-interface Position {
-  x: number;
-  y: number;
-}
+interface Position { x: number; y: number; }
 
 interface SavedGame {
   grid: CellType[][];
@@ -40,7 +41,7 @@ interface SavedGame {
   mazeType: MazeType;
 }
 
-const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false, language = 'ID' as Language }) => {
+const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame, onBack, isQuickMode = false, isPracticeMode = false, language = 'ID' }) => {
   const t = (key: string) => getTranslation(language, `pathfinding.${key}`);
   
   const [viewState, setViewState] = useState<'SELECT' | 'GAME'>('SELECT');
@@ -73,6 +74,7 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   const isMountedRef = useRef(true);
   const mistakeTracker = useRef<string[]>([]);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -85,284 +87,174 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
     };
   }, []);
 
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [debugLogs, commands]);
+
+  // --- LOGIC: MAZE GENERATION ---
+  const createMaze = (size: number, type: MazeType): CellType[][] => {
+      let maze: CellType[][] = Array(size).fill(null).map(() => Array(size).fill('EMPTY'));
+      
+      if (type === 'LABYRINTH') {
+          // Fill with walls
+          for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) maze[y][x] = 'WALL';
+          
+          const stack: Position[] = [{x: 0, y: 0}];
+          maze[0][0] = 'EMPTY';
+          
+          while (stack.length > 0) {
+              const current = stack[stack.length - 1];
+              const neighbors: Position[] = [];
+              [[0, -2], [0, 2], [-2, 0], [2, 0]].forEach(([dx, dy]) => {
+                  const nx = current.x + dx, ny = current.y + dy;
+                  if (nx >= 0 && nx < size && ny >= 0 && ny < size && maze[ny][nx] === 'WALL') {
+                      neighbors.push({x: nx, y: ny});
+                  }
+              });
+
+              if (neighbors.length > 0) {
+                  const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                  maze[next.y][next.x] = 'EMPTY';
+                  maze[current.y + (next.y - current.y)/2][current.x + (next.x - current.x)/2] = 'EMPTY';
+                  stack.push(next);
+              } else {
+                  stack.pop();
+              }
+          }
+          // Ensure end is reachable
+          maze[size-1][size-1] = 'EMPTY';
+          if (maze[size-2][size-1] === 'WALL' && maze[size-1][size-2] === 'WALL') {
+               maze[size-1][size-2] = 'EMPTY';
+          }
+      } 
+      else if (type === 'BUNKER') {
+          for (let y = 0; y < size; y++) {
+             for (let x = 0; x < size; x++) {
+                 if (x % 2 !== 0 && y % 2 !== 0) maze[y][x] = 'WALL';
+                 if (Math.random() < 0.2) maze[y][x] = 'WALL';
+             }
+          }
+      }
+      else {
+          const density = type === 'OBSTACLE' ? 0.35 : 0.2;
+          for(let y=0; y<size; y++) for(let x=0; x<size; x++) {
+              if(Math.random() < density && (x!==0||y!==0) && (x!==size-1||y!==size-1)) maze[y][x] = 'WALL';
+          }
+          // Path Guarantee
+          maze[0][1] = 'EMPTY'; maze[1][0] = 'EMPTY'; 
+          maze[size-1][size-2] = 'EMPTY'; maze[size-2][size-1] = 'EMPTY';
+      }
+      return maze;
+  };
+
   const generateGrid = useCallback((type: MazeType) => {
     const size = difficulty === Difficulty.BEGINNER ? 5 : difficulty === Difficulty.INTERMEDIATE ? 7 : 9;
     setGridSize(size);
-    let newGrid: CellType[][] = Array(size).fill(null).map(() => Array(size).fill('EMPTY'));
+    let newGrid = createMaze(size, type);
     
     const start = { x: 0, y: 0 };
-    let end = { x: size - 1, y: size - 1 };
+    const end = { x: size - 1, y: size - 1 };
     
-    if (type === 'LABYRINTH') {
-        newGrid = Array(size).fill(null).map(() => Array(size).fill('WALL'));
-    }
-
-    if (type === 'RANDOM') {
-        let curr = { ...start };
-        const path = new Set<string>([`0,0`]);
-        let safety = 0;
-        while ((curr.x !== end.x || curr.y !== end.y) && safety < 200) {
-            safety++;
-            const moves = [];
-            if (curr.x < end.x) moves.push({x:curr.x+1, y:curr.y});
-            if (curr.y < end.y) moves.push({x:curr.x, y:curr.y+1});
-            if(Math.random() > 0.6) {
-                if(curr.x > 0) moves.push({x:curr.x-1, y:curr.y});
-                if(curr.y > 0) moves.push({x:curr.x, y:curr.y-1});
-            }
-            const valid = moves.filter(p => p.x >= 0 && p.x < size && p.y >= 0 && p.y < size);
-            if(valid.length) curr = valid[Math.floor(Math.random()*valid.length)];
-            path.add(`${curr.x},${curr.y}`);
-        }
-        for(let y=0; y<size; y++) {
-            for(let x=0; x<size; x++) {
-                if(!path.has(`${x},${y}`) && Math.random() < 0.3) newGrid[y][x] = 'WALL';
-            }
-        }
-    } else if (type === 'LABYRINTH') {
-        const stack = [start];
-        newGrid[start.y][start.x] = 'EMPTY';
-        while(stack.length > 0) {
-            const current = stack[stack.length - 1];
-            const neighbors = [];
-            const dirs = [{x:0, y:-2}, {x:0, y:2}, {x:-2, y:0}, {x:2, y:0}];
-            for (const d of dirs) {
-                const nx = current.x + d.x, ny = current.y + d.y;
-                if (nx >= 0 && nx < size && ny >= 0 && ny < size && newGrid[ny][nx] === 'WALL') {
-                    neighbors.push({nx, ny, dx: d.x/2, dy: d.y/2});
-                }
-            }
-            if (neighbors.length > 0) {
-                const chosen = neighbors[Math.floor(Math.random() * neighbors.length)];
-                newGrid[current.y + chosen.dy][current.x + chosen.dx] = 'EMPTY';
-                newGrid[chosen.ny][chosen.nx] = 'EMPTY';
-                stack.push({x: chosen.nx, y: chosen.ny});
-            } else {
-                stack.pop();
-            }
-        }
-        newGrid[end.y][end.x] = 'EMPTY';
-    } else if (type === 'BINARY') {
-        newGrid = Array(size).fill(null).map(() => Array(size).fill('WALL'));
-        for(let y=0; y<size; y+=2) {
-             for(let x=0; x<size; x+=2) {
-                 newGrid[y][x] = 'EMPTY';
-                 const dirs = [];
-                 if (y > 0) dirs.push('N');
-                 if (x > 0) dirs.push('W');
-                 const carve = dirs[Math.floor(Math.random() * dirs.length)];
-                 if (carve === 'N') newGrid[y-1][x] = 'EMPTY';
-                 if (carve === 'W') newGrid[y][x-1] = 'EMPTY';
-             }
-        }
-    } else if (type === 'BUNKER') {
-        end = { x: Math.floor(size/2), y: Math.floor(size/2) };
-        for(let r=0; r<size/2; r+=2) {
-             for(let i=r; i<size-r; i++) {
-                 if(i!==r+1) newGrid[r][i] = 'WALL'; 
-                 if(i!==size-r-2) newGrid[size-r-1][i] = 'WALL';
-                 if(i!==r+1) newGrid[i][r] = 'WALL';
-                 newGrid[i][size-r-1] = 'WALL'; 
-             }
-             newGrid[r+1][r] = 'EMPTY'; 
-        }
-    } else if (type === 'OBSTACLE') {
-        for(let y=0; y<size; y++) {
-            for(let x=0; x<size; x++) {
-                if (Math.random() < 0.4) newGrid[y][x] = 'WALL';
-            }
-        }
-        newGrid[start.y][start.x] = 'EMPTY';
-        newGrid[end.y][end.x] = 'EMPTY';
-    }
-
     newGrid[start.y][start.x] = 'START';
     newGrid[end.y][end.x] = 'END';
-    setStartPos(start);
-    setBotPos(start);
-    setEndPos(end);
-    setGrid(newGrid);
-    setCommands([]);
-    setDebugLogs([]);
-    setIsRunning(false);
-    setActiveCommandIndex(null);
-    setIsWinning(false);
+    
+    setStartPos(start); setBotPos(start); setEndPos(end);
+    setGrid(newGrid); setCommands([]); setDebugLogs(["> SYSTEM READY"]); setIsRunning(false); setActiveCommandIndex(null); setIsWinning(false);
   }, [difficulty]);
 
   const startGame = (type: MazeType) => {
-    playSound('click');
-    setCurrentMazeType(type);
-    generateGrid(type);
-    setViewState('GAME');
-    startMusic('FOCUS');
-    setTimeLeft(TOTAL_TIME);
+    playSound('click'); setCurrentMazeType(type); generateGrid(type); setViewState('GAME'); startMusic('FOCUS'); setTimeLeft(TOTAL_TIME);
   };
 
+  // --- LOGIC: GAMEPLAY ---
   const saveMission = () => {
-    const data: SavedGame = {
-        grid, botPos, startPos, endPos, commands, level, score, mazeType: currentMazeType
-    };
-    localStorage.setItem('pathfinding_save', JSON.stringify(data));
-    playSound('correct');
+    const data: SavedGame = { grid, botPos, startPos, endPos, commands, level, score, mazeType: currentMazeType };
+    localStorage.setItem('pathfinding_save', JSON.stringify(data)); playSound('correct');
   };
 
   const loadMission = () => {
     const saved = localStorage.getItem('pathfinding_save');
     if (saved) {
         const data: SavedGame = JSON.parse(saved);
-        setGrid(data.grid);
-        setBotPos(data.botPos);
-        setStartPos(data.startPos);
-        setEndPos(data.endPos);
-        setCommands(data.commands);
-        setLevel(data.level);
-        setScore(data.score);
-        setCurrentMazeType(data.mazeType);
-        setGridSize(data.grid.length);
-        setViewState('GAME');
-        startMusic('FOCUS');
-        playSound('click');
+        setGrid(data.grid); setBotPos(data.botPos); setStartPos(data.startPos); setEndPos(data.endPos);
+        setCommands(data.commands); setLevel(data.level); setScore(data.score); setCurrentMazeType(data.mazeType); setGridSize(data.grid.length);
+        setViewState('GAME'); startMusic('FOCUS'); playSound('click');
     }
   };
 
   const executeRun = async () => {
     if (commands.length === 0 || isRunning) return;
+    setIsRunning(true); setDebugLogs(p => [...p, "> EXECUTING SEQUENCE..."]); 
+    let currentPos = { ...startPos }; let crash = false; let win = false; setBotPos(startPos);
     
-    setIsRunning(true);
-    setDebugLogs([]); 
-    let currentPos = { ...startPos };
-    let crash = false;
-    let win = false;
-
-    setBotPos(startPos);
-    
-    // Wait a moment before starting
     await new Promise(r => setTimeout(r, 300));
-
+    
     for (let i = 0; i < commands.length; i++) {
         if (!isMountedRef.current) return;
-        setActiveCommandIndex(i); 
-        const cmd = commands[i];
-        let nextPos = { ...currentPos };
-
-        switch(cmd) {
-            case 'UP': nextPos.y -= 1; break;
-            case 'DOWN': nextPos.y += 1; break;
-            case 'LEFT': nextPos.x -= 1; break;
-            case 'RIGHT': nextPos.x += 1; break;
-        }
-
+        setActiveCommandIndex(i); const cmd = commands[i]; let nextPos = { ...currentPos };
+        
+        switch(cmd) { case 'UP': nextPos.y-=1; break; case 'DOWN': nextPos.y+=1; break; case 'LEFT': nextPos.x-=1; break; case 'RIGHT': nextPos.x+=1; break; }
+        
         let statusLog = 'OK';
-        if (nextPos.x < 0 || nextPos.x >= gridSize || nextPos.y < 0 || nextPos.y >= gridSize) {
-            crash = true; statusLog = 'BOUNDS';
-        } else if (grid[nextPos.y][nextPos.x] === 'WALL') {
-            crash = true; statusLog = 'WALL';
+        if (nextPos.x < 0 || nextPos.x >= gridSize || nextPos.y < 0 || nextPos.y >= gridSize) { 
+            crash = true; statusLog = 'BOUNDS_ERR'; 
+        } else if (grid[nextPos.y][nextPos.x] === 'WALL') { 
+            crash = true; statusLog = 'WALL_COLLISION'; 
         }
-
-        if (!crash && nextPos.x === endPos.x && nextPos.y === endPos.y) {
-            win = true; statusLog = 'GOAL';
+        
+        if (!crash && nextPos.x === endPos.x && nextPos.y === endPos.y) { 
+            win = true; statusLog = 'TARGET_ACQUIRED'; 
         }
-
-        setDebugLogs(prev => [`[${i+1}] ${cmd}: (${nextPos.x},${nextPos.y}) ${statusLog}`, ...prev]);
-
-        if (crash) {
-            setBotPos(nextPos); 
-            playSound('wrong');
-            mistakeTracker.current.push("Collision Error");
-            break;
+        
+        setDebugLogs(prev => [...prev, `[${i+1}] ${cmd}: (${nextPos.x},${nextPos.y}) ${statusLog}`]);
+        
+        if (crash) { 
+            playSound('wrong'); mistakeTracker.current.push(statusLog);
+            if (statusLog === 'WALL_COLLISION') setBotPos(nextPos); // Visually hit wall
+            break; 
         }
-
-        setBotPos(nextPos);
-        currentPos = nextPos;
-        playSound('pop');
-
+        
+        setBotPos(nextPos); currentPos = nextPos; playSound('pop');
         if (win) break; 
-        // Increased delay to 350ms to be safer than CSS 300ms transition
-        const delay = isDebugMode ? 1000 : 350; 
+        const delay = isDebugMode ? 600 : 250; 
         await new Promise(r => setTimeout(r, delay));
     }
-
+    
     if (win) {
-        setIsWinning(true);
-        setScore(s => s + 100 + (difficulty === Difficulty.ADVANCED ? 50 : 0));
-        setLevel(l => l + 1);
-        playSound('correct');
-        setShowConfetti(true);
-        localStorage.removeItem('pathfinding_save');
-        setHasSavedGame(false);
-        setTimeout(() => {
-            if(isMountedRef.current) {
-                setIsWinning(false);
-                generateGrid(currentMazeType);
-            }
-        }, 1500);
+        setIsWinning(true); setScore(s => s + 100 + (difficulty === Difficulty.ADVANCED ? 50 : 0)); setLevel(l => l + 1); playSound('correct'); setShowConfetti(true); localStorage.removeItem('pathfinding_save'); setHasSavedGame(false);
+        setDebugLogs(p => [...p, "> MISSION SUCCESS. UPLOADING..."]);
+        setTimeout(() => { if(isMountedRef.current) { setIsWinning(false); generateGrid(currentMazeType); } }, 1500);
     } else {
-        setTimeout(() => {
-             if (isMountedRef.current) {
-                setIsRunning(false);
-                setBotPos(startPos);
-                setActiveCommandIndex(null);
-                setScore(s => Math.max(0, s - 20));
-             }
-        }, 1000);
+        setDebugLogs(p => [...p, "> EXECUTION FAILED. RESETTING..."]);
+        setTimeout(() => { if (isMountedRef.current) { setIsRunning(false); setBotPos(startPos); setActiveCommandIndex(null); setScore(s => Math.max(0, s - 20)); } }, 1000);
     }
   };
 
-  const addCommand = (dir: Direction) => {
-    if (isRunning) return;
-    if (commands.length < 20) { 
-        setCommands(prev => [...prev, dir]);
-        playSound('click');
-    }
-  };
-
-  const removeCommand = () => {
-    if (isRunning) return;
-    setCommands(prev => prev.slice(0, -1));
-    playSound('click');
-  };
-
-  const clearCommands = () => {
-    if (isRunning) return;
-    setCommands([]);
-    playSound('click');
-  };
+  const addCommand = (dir: Direction) => { if (isRunning) return; if (commands.length < 20) { setCommands(prev => [...prev, dir]); playSound('click'); } };
+  const removeCommand = () => { if (isRunning) return; setCommands(prev => prev.slice(0, -1)); playSound('click'); };
+  const clearCommands = () => { if (isRunning) return; setCommands([]); playSound('click'); };
 
   const handleFinish = useCallback(() => {
     if (!isMountedRef.current) return;
     if (viewState === 'GAME' && !isRunning) saveMission();
-    onEndGame({
-      score: score,
-      totalQuestions: level,
-      correctAnswers: level - 1,
-      accuracy: level > 1 ? 100 : 0, 
-      duration: (TOTAL_TIME - timeLeft) * 1000,
-      difficulty: difficulty,
-      gameMode: GameMode.PATHFINDING,
-      mistakePatterns: mistakeTracker.current
-    });
+    onEndGame({ score: score, totalQuestions: level, correctAnswers: level - 1, accuracy: level > 1 ? 100 : 0, duration: (TOTAL_TIME - timeLeft) * 1000, difficulty: difficulty, gameMode: GameMode.PATHFINDING, mistakePatterns: mistakeTracker.current });
   }, [viewState, isRunning, level, score, timeLeft, difficulty, onEndGame]);
 
-  useEffect(() => {
-    if (viewState === 'GAME' && !isPracticeMode && timeLeft > 0 && !isRunning) {
-         const timer = setInterval(() => setTimeLeft(t => Math.max(0, t - 0.1)), 100);
-         return () => clearInterval(timer);
-    }
-  }, [viewState, isPracticeMode, timeLeft, isRunning]);
+  useEffect(() => { if (viewState === 'GAME' && !isPracticeMode && timeLeft > 0 && !isRunning) { const timer = setInterval(() => setTimeLeft(t => Math.max(0, t - 0.1)), 100); return () => clearInterval(timer); } }, [viewState, isPracticeMode, timeLeft, isRunning]);
+  useEffect(() => { if (timeLeft <= 0 && viewState === 'GAME' && !isPracticeMode) handleFinish(); }, [timeLeft, viewState, isPracticeMode, handleFinish]);
 
-  useEffect(() => {
-    if (timeLeft <= 0 && viewState === 'GAME' && !isPracticeMode) handleFinish();
-  }, [timeLeft, viewState, isPracticeMode, handleFinish]);
-
+  // --- RENDER: SELECT SCREEN ---
   if (viewState === 'SELECT') {
       return (
-        <div className="w-full max-w-2xl mx-auto space-y-4 animate-fade-in h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar">
+        <div className="w-full max-w-2xl mx-auto space-y-4 animate-fade-in h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar flex flex-col justify-center">
              <div className="flex justify-between items-center mb-4">
                  <Button variant="ghost" onClick={onBack}>&larr; {t('missionSelect')}</Button>
                  <Badge color="bg-amber-500">{t('title')}</Badge>
              </div>
              {hasSavedGame && (
-                 <Card onClick={loadMission} className="cursor-pointer border-l-8 border-l-retro-green flex items-center justify-between hover:bg-slate-900 group p-4">
+                 <Card onClick={loadMission} className="cursor-pointer border-l-8 border-l-retro-green flex items-center justify-between hover:bg-slate-900 group p-4 border-2 border-slate-700 mb-4">
                     <div className="flex items-center gap-4">
                         <Database className="w-8 h-8 text-retro-green" />
                         <div>
@@ -374,16 +266,10 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
                  </Card>
              )}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {[
-                     { id: 'RANDOM', name: t('missions.random'), icon: <Map />, desc: "Standard tasks." },
-                     { id: 'LABYRINTH', name: t('missions.labyrinth'), icon: <Grid />, desc: "Complex mazes." },
-                     { id: 'BUNKER', name: t('missions.bunker'), icon: <Database />, desc: "Spiral defense." },
-                     { id: 'BINARY', name: t('missions.binary'), icon: <Cpu />, desc: "Biased paths." },
-                     { id: 'OBSTACLE', name: t('missions.obstacle'), icon: <Zap />, desc: "Debris field." },
-                 ].map((m) => (
-                     <Card key={m.id} onClick={() => startGame(m.id as MazeType)} className="cursor-pointer hover:border-retro-cyan hover:-translate-y-1 transition-all p-4">
+                 {[{ id: 'RANDOM', name: t('missions.random'), icon: <Map />, desc: "Standard tasks." }, { id: 'LABYRINTH', name: t('missions.labyrinth'), icon: <Grid />, desc: "Complex mazes." }, { id: 'BUNKER', name: t('missions.bunker'), icon: <Database />, desc: "Room clearing." }, { id: 'BINARY', name: t('missions.binary'), icon: <Cpu />, desc: "Biased paths." }, { id: 'OBSTACLE', name: t('missions.obstacle'), icon: <Zap />, desc: "Debris field." }].map((m) => (
+                     <Card key={m.id} onClick={() => startGame(m.id as MazeType)} className="cursor-pointer hover:border-retro-cyan hover:-translate-y-1 transition-all p-4 border-2 border-slate-700 group">
                          <div className="flex items-center gap-3 mb-2">
-                             <div className="text-retro-cyan">{m.icon}</div>
+                             <div className="text-retro-cyan group-hover:text-white transition-colors">{m.icon}</div>
                              <h3 className="font-pixel text-sm">{m.name}</h3>
                          </div>
                          <p className="text-xs text-slate-400 font-mono">{m.desc}</p>
@@ -394,132 +280,163 @@ const PathfindingGame: React.FC<PathfindingGameProps> = ({ difficulty, onEndGame
       );
   }
 
+  // --- RENDER: GAME SCREEN ---
   return (
-    <div className="w-full max-w-4xl mx-auto relative h-[calc(100vh-100px)] flex flex-col">
-      {!introFinished && (
-        <GameIntro 
-          gameMode={GameMode.PATHFINDING} 
-          language={language}
-          onStart={() => {
-            playSound('click');
-            setIntroFinished(true);
-            setShowTutorial(true);
-          }} 
-        />
-      )}
+    <div className="w-full max-w-7xl mx-auto h-[calc(100vh-80px)] flex flex-col gap-2 p-2 relative">
+      {!introFinished && <GameIntro gameMode={GameMode.PATHFINDING} language={language} onStart={() => { playSound('click'); setIntroFinished(true); setShowTutorial(true); }} />}
       {showConfetti && <Confetti />}
-      <TutorialOverlay 
-        isOpen={showTutorial} 
-        onClose={() => setShowTutorial(false)}
-        title={getTranslation(language, 'tutorialTitle')}
-        content={[
-            t('goal'),
-            "HINDARI TEMBOK / BOUNDS.",
-            "INPUT COMMANDS > EXECUTE",
-        ]}
-        icon={<Map className="w-6 h-6" />}
-      />
+      <TutorialOverlay isOpen={showTutorial} onClose={() => setShowTutorial(false)} title={t('tutorialTitle')} content={[t('goal'), "HINDARI TEMBOK / BOUNDS.", "INPUT COMMANDS > EXECUTE"]} icon={<Map className="w-6 h-6" />} />
       <QuitModal isOpen={showQuitModal} onConfirm={handleFinish} onCancel={() => setShowQuitModal(false)} language={language} />
 
-      <div className="flex justify-between items-center mb-2 shrink-0">
-         <div className="flex gap-1">
-            <Button variant="ghost" onClick={() => setShowQuitModal(true)} className="!px-2 text-xs">&larr; {t('save')}</Button>
-            <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400"><HelpCircle className="w-4 h-4" /></Button>
+      {/* HEADER BAR */}
+      <div className="flex justify-between items-center bg-slate-900/90 p-2 border-b-2 border-slate-700 shrink-0 z-20">
+         <div className="flex gap-2 items-center">
+            <Button variant="ghost" onClick={() => setShowQuitModal(true)} className="!px-2 text-xs !py-1 text-slate-400 hover:text-white">&larr; EXIT</Button>
+            <Tooltip text="HELP">
+                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 !py-1 text-neuro-400 hover:text-white"><HelpCircle className="w-4 h-4" /></Button>
+            </Tooltip>
          </div>
          <div className="flex gap-2 items-center">
-            <Badge color="bg-amber-500">Lv.{level}</Badge>
-            <Badge color="bg-retro-green">Sc:{score}</Badge>
+            <Badge color="bg-amber-600 text-black border-amber-400">LVL {level}</Badge>
+            <Badge color="bg-emerald-600 text-black border-emerald-400">PTS: {score}</Badge>
          </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0 overflow-hidden">
-        {/* GRID AREA (FLEXIBLE) */}
-        <div className="flex-1 flex flex-col items-center justify-start lg:justify-center min-h-0 overflow-hidden relative">
-             <div className="w-full max-w-md mb-2 shrink-0"><CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} /></div>
-             
-             <div className="flex-1 w-full flex items-center justify-center min-h-0">
-                <div className="relative aspect-square h-full max-h-full bg-slate-800 border-4 border-slate-600 p-1">
+      <div className="w-full shrink-0">
+           <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} className="!mb-0" />
+      </div>
+
+      {/* GAME LAYOUT - Responsive Split */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0 relative">
+        
+        {/* LEFT: TACTICAL MAP */}
+        <div className="flex-1 relative flex items-center justify-center bg-slate-950 border-2 border-slate-700 shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] rounded-lg overflow-hidden min-h-0">
+            {/* Background Grid Pattern */}
+            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+            
+            {/* The Grid Container - Responsive Aspect Ratio */}
+            <div className="w-full h-full p-4 flex items-center justify-center">
+                <div 
+                    className="relative transition-all duration-300 shadow-2xl bg-black border border-slate-800"
+                    style={{ 
+                        // Key to responsiveness: maintain square aspect ratio
+                        // Scale based on the smaller dimension available
+                        width: 'min(100%, 100%)',
+                        maxWidth: '65vh', // On desktop, limit by height roughly
+                        aspectRatio: '1/1',
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                        gridTemplateRows: `repeat(${gridSize}, 1fr)`,
+                        gap: '1px'
+                    }}
+                >
+                    {grid.map((row, y) => row.map((cell, x) => {
+                        const isEnd = endPos.x === x && endPos.y === y;
+                        const isStart = startPos.x === x && startPos.y === y;
+                        return (
+                            <div key={`${x}-${y}`} className="w-full h-full relative border border-slate-800/50 bg-slate-900/30">
+                                {cell === 'WALL' && (
+                                    <div className="w-full h-full bg-slate-800/80 border border-slate-600 relative overflow-hidden">
+                                        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 6px)' }}></div>
+                                    </div>
+                                )}
+                                {isStart && <div className="absolute inset-1 border-2 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-pulse"></div>}
+                                {isEnd && (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Flag className="w-3/5 h-3/5 text-red-500 fill-current drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-bounce" />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }))}
+
+                    {/* Bot Overlay */}
                     <div 
-                        className="w-full h-full bg-slate-900"
+                        className="absolute z-20 transition-all duration-300 ease-in-out pointer-events-none flex items-center justify-center"
                         style={{ 
-                            display: 'grid',
-                            gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                            gridTemplateRows: `repeat(${gridSize}, 1fr)`,
-                            gap: '1px',
+                            left: `${(botPos.x / gridSize) * 100}%`,
+                            top: `${(botPos.y / gridSize) * 100}%`,
+                            width: `${100 / gridSize}%`,
+                            height: `${100 / gridSize}%`,
                         }}
                     >
-                        {grid.map((row, y) => row.map((cell, x) => {
-                            const isEnd = endPos.x === x && endPos.y === y;
-                            const isStart = startPos.x === x && startPos.y === y;
-                            let cellClass = "w-full h-full relative flex items-center justify-center ";
-                            if (cell === 'WALL') cellClass += "bg-slate-800 border border-slate-700";
-                            else cellClass += "bg-black border border-white/5";
-                            return (
-                                <div key={`${x}-${y}`} className={cellClass}>
-                                    {cell === 'WALL' && <div className="w-full h-full opacity-40 bg-[repeating-linear-gradient(45deg,#000,#000_2px,#475569_2px,#475569_4px)]"></div>}
-                                    {isStart && <div className="w-2/3 h-2/3 bg-emerald-500/50 border border-emerald-500"></div>}
-                                    {isEnd && <Flag className="w-2/3 h-2/3 text-red-500 animate-bounce" />}
-                                </div>
-                            );
-                        }))}
-                        <div 
-                            className="absolute z-20 transition-all duration-300 ease-linear pointer-events-none p-0.5"
-                            style={{
-                                width: `calc(100% / ${gridSize})`,
-                                height: `calc(100% / ${gridSize})`,
-                                left: `calc(${botPos.x} * 100% / ${gridSize})`,
-                                top: `calc(${botPos.y} * 100% / ${gridSize})`,
-                            }}
-                        >
-                            <div className={`w-full h-full border border-white flex items-center justify-center ${isWinning ? 'bg-retro-green animate-spin' : 'bg-retro-cyan'}`}>
-                                 <Bot className="w-3/4 h-3/4 text-black" />
-                            </div>
+                        <div className={`relative w-[85%] h-[85%] bg-retro-cyan/20 border-2 border-retro-cyan shadow-[0_0_15px_rgba(34,211,238,0.6)] flex items-center justify-center backdrop-blur-sm rounded-sm ${isWinning ? 'animate-spin bg-retro-green/40 border-retro-green' : ''}`}>
+                             <Bot className="w-3/4 h-3/4 text-white" />
                         </div>
                     </div>
                 </div>
-             </div>
+            </div>
         </div>
 
-        {/* CONTROL PANEL (BOTTOM ON MOBILE / RIGHT ON DESKTOP) */}
-        <div className="flex-none lg:flex-1 lg:w-1/3 flex flex-col gap-2 min-w-0 w-full h-[200px] lg:h-auto shrink-0">
-            <div className="flex justify-between items-center bg-black border border-slate-700 p-1 px-2 shrink-0">
-                <div className="flex items-center gap-1 text-retro-yellow font-pixel text-[10px]"><Cpu size={12} /> BOT CONTROL</div>
-                <Toggle checked={isDebugMode} onChange={setIsDebugMode} label={t('debug')} />
+        {/* RIGHT: COMMAND CENTER (Fixed height on mobile, full on desktop) */}
+        <div className="lg:w-[350px] shrink-0 flex flex-col gap-2 bg-black border-2 border-slate-700 rounded-lg p-3 shadow-retro-lg">
+            
+            {/* Terminal Screen */}
+            <div className="bg-slate-900 border-2 border-slate-600 rounded p-2 h-[120px] lg:h-[200px] overflow-hidden flex flex-col relative shadow-inner">
+                <div className="flex justify-between items-center text-[10px] text-slate-400 border-b border-slate-700 pb-1 mb-1 font-pixel">
+                    <span className="flex items-center gap-1"><Terminal size={10} /> SYSTEM_LOG</span>
+                    <Toggle checked={isDebugMode} onChange={setIsDebugMode} label="DEBUG" />
+                </div>
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar font-mono text-[10px] leading-relaxed">
+                    {isDebugMode ? (
+                        <div className="text-retro-green">
+                            {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
+                            <div ref={logsEndRef} />
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap gap-1 content-start">
+                             {commands.length === 0 && <span className="text-slate-600 animate-pulse w-full text-center mt-4">AWAITING INPUT...</span>}
+                             {commands.map((cmd, idx) => (
+                                <div key={idx} className={`w-6 h-6 flex items-center justify-center border rounded font-bold transition-all ${idx === activeCommandIndex ? 'bg-retro-green text-black border-white scale-110 shadow-glow z-10' : 'bg-slate-800 text-retro-cyan border-slate-600'}`}>
+                                    {cmd === 'UP' ? '↑' : cmd === 'DOWN' ? '↓' : cmd === 'LEFT' ? '←' : '→'}
+                                </div>
+                             ))}
+                             <div ref={logsEndRef} />
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* COMMAND QUEUE */}
-            <div className="bg-black border-2 border-slate-600 p-2 flex-1 overflow-y-auto custom-scrollbar font-mono text-[10px]">
-                {isDebugMode ? (
-                     <div className="flex flex-col gap-0.5 text-retro-green">
-                        {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
+            {/* Controls Grid */}
+            <div className="grid grid-cols-2 gap-2 mt-auto">
+                 {/* D-PAD */}
+                 <div className="bg-slate-800/50 p-2 rounded border border-slate-700 aspect-square flex items-center justify-center">
+                     <div className="grid grid-cols-3 gap-1 w-full max-w-[140px]">
+                         <div className="col-start-2">
+                            <Button onClick={() => addCommand('UP')} disabled={isRunning} className="w-full aspect-square flex items-center justify-center p-0 bg-slate-700 border-b-4 border-slate-900 active:border-b-0 active:translate-y-1"><ArrowUp size={20}/></Button>
+                         </div>
+                         <div className="col-start-1 row-start-2">
+                            <Button onClick={() => addCommand('LEFT')} disabled={isRunning} className="w-full aspect-square flex items-center justify-center p-0 bg-slate-700 border-b-4 border-slate-900 active:border-b-0 active:translate-y-1"><ArrowLeft size={20}/></Button>
+                         </div>
+                         <div className="col-start-2 row-start-2">
+                            <Button onClick={() => addCommand('DOWN')} disabled={isRunning} className="w-full aspect-square flex items-center justify-center p-0 bg-slate-700 border-b-4 border-slate-900 active:border-b-0 active:translate-y-1"><ArrowDown size={20}/></Button>
+                         </div>
+                         <div className="col-start-3 row-start-2">
+                            <Button onClick={() => addCommand('RIGHT')} disabled={isRunning} className="w-full aspect-square flex items-center justify-center p-0 bg-slate-700 border-b-4 border-slate-900 active:border-b-0 active:translate-y-1"><ArrowRight size={20}/></Button>
+                         </div>
                      </div>
-                ) : (
-                    <div className="flex flex-wrap gap-1 content-start">
-                        {commands.length === 0 && <span className="text-retro-green animate-pulse"> WAITING...</span>}
-                        {commands.map((cmd, idx) => (
-                            <div key={idx} className={`w-5 h-5 flex items-center justify-center border ${
-                                idx === activeCommandIndex ? 'bg-retro-green text-black border-white' : 'bg-slate-900 text-retro-cyan border-retro-cyan'
-                            }`}>
-                                {cmd === 'UP' ? <ArrowUp size={10}/> : cmd === 'DOWN' ? <ArrowDown size={10}/> : cmd === 'LEFT' ? <ArrowLeft size={10}/> : <ArrowRight size={10}/>}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                 </div>
 
-            {/* BUTTONS */}
-            <div className="bg-slate-900 border border-slate-700 p-2 grid grid-cols-4 gap-1 shrink-0">
-                 <Button onClick={() => addCommand('UP')} disabled={isRunning} className="justify-center bg-slate-800 p-2 border-b-2"><ArrowUp size={16}/></Button>
-                 <Button onClick={() => addCommand('DOWN')} disabled={isRunning} className="justify-center bg-slate-800 p-2 border-b-2"><ArrowDown size={16}/></Button>
-                 <Button onClick={() => addCommand('LEFT')} disabled={isRunning} className="justify-center bg-slate-800 p-2 border-b-2"><ArrowLeft size={16}/></Button>
-                 <Button onClick={() => addCommand('RIGHT')} disabled={isRunning} className="justify-center bg-slate-800 p-2 border-b-2"><ArrowRight size={16}/></Button>
-                 
-                 <Button onClick={removeCommand} disabled={isRunning} variant="secondary" className="col-span-2 justify-center text-[10px] p-1 h-8"><RotateCcw size={12} className="mr-1"/> UNDO</Button>
-                 <Button onClick={clearCommands} disabled={isRunning} variant="secondary" className="col-span-2 justify-center text-[10px] p-1 h-8"><Trash2 size={12} className="mr-1"/> CLEAR</Button>
-                 
-                 <Button onClick={executeRun} disabled={isRunning || commands.length === 0} className={`col-span-4 justify-center h-10 ${isRunning ? 'bg-retro-yellow' : 'bg-retro-green'}`}>
-                    {isRunning ? 'RUNNING...' : <><Play size={14} className="mr-2"/> EXECUTE</>}
-                 </Button>
+                 {/* Actions */}
+                 <div className="flex flex-col gap-2 justify-center">
+                     <div className="flex gap-1">
+                         <Button onClick={removeCommand} disabled={isRunning} variant="secondary" className="flex-1 justify-center py-3 border-b-4 active:border-b-0 active:translate-y-1 text-xs"><RotateCcw size={16}/></Button>
+                         <Button onClick={clearCommands} disabled={isRunning} variant="danger" className="flex-1 justify-center py-3 border-b-4 active:border-b-0 active:translate-y-1 text-xs"><Trash2 size={16}/></Button>
+                     </div>
+                     <div className="flex-1">
+                         <Button 
+                            onClick={executeRun} 
+                            disabled={isRunning || commands.length === 0} 
+                            className={`w-full h-full flex flex-col items-center justify-center text-sm font-bold border-b-4 active:border-b-0 active:translate-y-1 transition-all ${isRunning ? 'bg-retro-yellow text-black border-yellow-700' : 'bg-retro-green text-black border-green-700 hover:brightness-110'}`}
+                        >
+                            {isRunning ? <span className="animate-blink">RUNNING...</span> : <><Play size={24} className="mb-1 fill-current" /> EXECUTE</>}
+                        </Button>
+                     </div>
+                     <div className="text-center font-mono text-[10px] text-slate-500">
+                        MEM: {commands.length}/20
+                     </div>
+                 </div>
             </div>
         </div>
       </div>
