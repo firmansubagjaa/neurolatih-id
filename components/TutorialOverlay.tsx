@@ -6,7 +6,7 @@ interface TutorialOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  content: string[];
+  content: (string | React.ReactNode)[];
   icon?: React.ReactNode;
 }
 
@@ -26,13 +26,15 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClos
            </button>
         </div>
         
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3 mb-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
            {content.map((step, idx) => (
              <div key={idx} className="flex gap-3">
                 <div className="flex-shrink-0 w-5 h-5 rounded bg-slate-800 flex items-center justify-center text-xs font-bold text-retro-cyan border border-slate-700 font-pixel">
                   {idx + 1}
                 </div>
-                <p className="text-slate-300 text-sm leading-snug">{step}</p>
+                <div className="text-slate-300 text-sm leading-snug w-full">
+                  {step}
+                </div>
              </div>
            ))}
         </div>

@@ -7,7 +7,7 @@ import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { Grid, HelpCircle, Gauge, Zap } from 'lucide-react';
+import { Grid, HelpCircle, Gauge, Zap, BrainCircuit } from 'lucide-react';
 
 interface MemoryGameProps {
   difficulty: Difficulty;
@@ -28,19 +28,14 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
   const [level, setLevel] = useState(1);
   const [lives, setLives] = useState(3); 
   const [score, setScore] = useState(0);
-  // Change: Tutorial starts immediately after Intro finishes
   const [showTutorial, setShowTutorial] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<SpeedOption>('SEDANG');
 
-  // GLOBAL TIMER STATE (Reduced to 30s for intensity)
   const TOTAL_TIME = 30;
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
-
-  // MISTAKE TRACKER for AI Feedback
   const mistakeTracker = useRef<string[]>([]);
-
   const isMountedRef = useRef(true);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -59,7 +54,6 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
     return 5;
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
     startMusic('MEMORY');
@@ -72,24 +66,17 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
     };
   }, []);
 
-  // Handle Finish Logic (Memoized to prevent stale closures)
   const handleFinish = useCallback((completed: boolean) => {
     if (!isMountedRef.current) return;
-    
-    // Safety check: stop timer immediately
     if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
     }
-
     setGameState('RESULT');
-    // In practice mode, finishing is always a "win" (session completed)
     playSound((isPracticeMode || (lives > 0 && score > 0)) ? 'win' : 'wrong');
     stopMusic();
     
-    // Calculate final time used
     const timeUsed = Math.max(0, TOTAL_TIME - timeLeft);
-
     onEndGame({
       score: score,
       totalQuestions: level, 
@@ -102,12 +89,10 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
     });
   }, [isPracticeMode, lives, score, level, difficulty, onEndGame, timeLeft]);
 
-  // Timer Logic: Runs only during RECALL phase and when tutorial is closed
   useEffect(() => {
     if (!isPracticeMode && gameState === 'RECALL' && timeLeft > 0 && !showTutorial && !showQuitModal && introFinished) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
-          // Double speed decrement if Quick Mode
           const decrement = isQuickMode ? 0.2 : 0.1;
           const newVal = Math.max(0, prev - decrement);
           if (newVal <= 0) {
@@ -120,25 +105,21 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [gameState, showTutorial, showQuitModal, timeLeft, introFinished, isPracticeMode, isQuickMode]);
 
-  // Trigger finish when time hits 0
   useEffect(() => {
      if (!isPracticeMode && timeLeft <= 0 && gameState === 'RECALL') {
          handleFinish(false);
      }
   }, [timeLeft, isPracticeMode, gameState, handleFinish]);
 
-  // Init game logic after intro AND Tutorial
   useEffect(() => {
     if (introFinished && !showTutorial) {
         const size = getGridSize(difficulty);
         setGridSize(size);
-        // Only start level if not already started to avoid resets on re-renders
         if (gameState === 'PREPARE' && level === 1 && targetCells.length === 0) {
             startLevel(1);
         }
@@ -163,7 +144,6 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
       const cell = Math.floor(Math.random() * maxCells);
       if (!newTargetCells.includes(cell)) newTargetCells.push(cell);
     }
-    
     setTargetCells(newTargetCells);
 
     safeSetTimeout(() => {
@@ -173,9 +153,8 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
       const baseShowTime = Math.max(500, 1500 - (currentLevel * 100));
       let speedMultiplier = 1;
       
-      // If Quick Mode, force Fast speed (or faster)
       if (isQuickMode) {
-          speedMultiplier = 0.5; // Very fast
+          speedMultiplier = 0.5;
       } else {
           switch(playbackSpeed) {
             case 'LAMBAT': speedMultiplier = 1.5; break;
@@ -184,11 +163,9 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
           }
       }
       
-      const finalShowTime = baseShowTime * speedMultiplier;
-      
       safeSetTimeout(() => {
         setGameState('RECALL');
-      }, finalShowTime);
+      }, baseShowTime * speedMultiplier);
     }, 800);
   };
 
@@ -201,15 +178,11 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
       playSound('pop'); 
       
       const correctHits = newSelected.filter(id => targetCells.includes(id)).length;
-      
       if (correctHits === targetCells.length) {
         playSound('correct'); 
         setScore(s => s + (targetCells.length * 10 * (difficulty === Difficulty.ADVANCED ? 2 : 1)));
         setShowConfetti(true);
-        
-        // Go to next level immediately
         safeSetTimeout(() => {
-           // Ensure we don't proceed if game ended or time ran out in the interim
            if ((isPracticeMode || timeLeft > 0) && isMountedRef.current) {
              const nextLevel = level + 1;
              setLevel(nextLevel);
@@ -221,15 +194,11 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
       playSound('wrong');
       const newSelected = [...selectedCells, index];
       setSelectedCells(newSelected);
-      
-      mistakeTracker.current.push("Salah Pilih Lokasi (Spatial Error)");
-
+      mistakeTracker.current.push("Spatial Error");
       if (!isPracticeMode) {
         setLives(l => {
           const newLives = l - 1;
-          if (newLives <= 0) {
-            handleFinish(false); 
-          }
+          if (newLives <= 0) handleFinish(false);
           return newLives;
         });
       }
@@ -238,15 +207,12 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
 
   const handleBackRequest = () => {
     playSound('click');
-    if (isPracticeMode) {
-      handleFinish(true);
-    } else {
-      setShowQuitModal(true);
-    }
+    if (isPracticeMode) handleFinish(true);
+    else setShowQuitModal(true);
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto relative flex flex-col items-center">
+    <div className="w-full max-w-xl mx-auto relative flex flex-col items-center">
       {!introFinished && (
         <GameIntro 
           gameMode={GameMode.MEMORY} 
@@ -264,11 +230,9 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
         onClose={() => setShowTutorial(false)}
         title="Cara Bermain: Memori Pola"
         content={[
-          "Anda punya waktu total 30 Detik.",
-          isQuickMode ? "MODE CEPAT AKTIF: Pola muncul sekejap & Waktu berjalan 2x cepat!" : "",
-          "Waktu HANYA berjalan saat fase Ulangi (Recall).",
           "Ingat posisi kotak yang menyala.",
-          isPracticeMode ? "Mode Santai: Nyawa tidak terbatas." : "Hati-hati: Salah 3x = Game Over!"
+          "Waktu HANYA berjalan saat fase Ulangi (Recall).",
+          isQuickMode ? "MODE CEPAT: Pola hilang sangat cepat!" : "Tenang dan fokus."
         ]}
         icon={<Grid className="w-6 h-6" />}
       />
@@ -279,80 +243,76 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ difficulty, onEndGame, onBack, 
         onCancel={() => setShowQuitModal(false)}
       />
 
-      <div className="flex flex-col md:flex-row justify-between items-center mb-4 w-full gap-2 md:gap-4">
-        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
-          <Button variant="ghost" onClick={handleBackRequest} className="!px-2 text-xs">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
+      <div className="flex justify-between items-center mb-4 w-full gap-2">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={handleBackRequest} className="!px-2 text-xs md:text-sm">&larr; Keluar</Button>
+          <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400">
+             <HelpCircle className="w-4 h-4" />
+          </Button>
           
-          <div className="flex items-center gap-2">
-            <Tooltip text="ATURAN MAIN">
-                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400">
-                    <HelpCircle className="w-4 h-4" />
-                </Button>
-            </Tooltip>
-            
-            {!isQuickMode && (
-                <div className="flex items-center gap-1 bg-slate-800/50 p-1 pl-2 rounded-lg border border-white/10">
-                    <Gauge className="w-3 h-3 text-neuro-400" />
-                    <select 
-                    value={playbackSpeed}
-                    onChange={(e) => setPlaybackSpeed(e.target.value as SpeedOption)}
-                    className="bg-transparent text-[10px] font-bold text-slate-300 focus:outline-none cursor-pointer hover:text-white"
-                    disabled={gameState === 'MEMORIZE'}
-                    >
-                    <option value="LAMBAT" className="bg-slate-800">Lambat</option>
-                    <option value="SEDANG" className="bg-slate-800">Sedang</option>
-                    <option value="CEPAT" className="bg-slate-800">Cepat</option>
-                    </select>
-                </div>
-            )}
-          </div>
+          {!isQuickMode && (
+             <div className="hidden md:flex items-center gap-1 bg-slate-900/50 p-1 px-2 border border-white/10">
+                <Gauge className="w-3 h-3 text-neuro-400" />
+                <select 
+                  value={playbackSpeed}
+                  onChange={(e) => setPlaybackSpeed(e.target.value as SpeedOption)}
+                  className="bg-transparent text-xs font-bold text-slate-300 focus:outline-none cursor-pointer hover:text-white"
+                  disabled={gameState === 'MEMORIZE'}
+                >
+                  <option value="LAMBAT" className="bg-slate-800">Lambat</option>
+                  <option value="SEDANG" className="bg-slate-800">Sedang</option>
+                  <option value="CEPAT" className="bg-slate-800">Cepat</option>
+                </select>
+             </div>
+          )}
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto justify-end">
-           {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED x2</Badge>}
+        <div className="flex gap-1 md:gap-2">
+           {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED</Badge>}
            <Badge color="bg-pink-500">Lvl {level}</Badge>
            <Badge color="bg-neuro-500">{isPracticeMode ? '∞' : '❤️'.repeat(Math.max(0, lives))}</Badge>
         </div>
       </div>
 
-      <Card className="flex flex-col items-center relative overflow-hidden w-full">
+      <Card className="flex flex-col items-center relative overflow-hidden w-full p-4 md:p-6 bg-black border-2 md:border-4 border-slate-700">
         <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
 
-        <div className="mb-4 text-center z-10 w-full">
-          <h3 className={`text-xl md:text-2xl font-bold transition-colors ${gameState === 'MEMORIZE' ? 'text-neuro-400 animate-pulse' : 'text-white'}`}>
-            {gameState === 'PREPARE' && "Siap..."}
-            {gameState === 'MEMORIZE' && "Hafalkan!"}
-            {gameState === 'RECALL' && "Ulangi!"}
-            {gameState === 'RESULT' && "Selesai"}
+        <div className="mb-4 text-center z-10 w-full flex flex-col items-center">
+          <div className="flex items-center gap-2 mb-1 text-slate-400 font-pixel text-xs uppercase tracking-widest">
+             <BrainCircuit className="w-3 h-3" /> PHASE:
+          </div>
+          <h3 className={`text-2xl md:text-3xl font-pixel transition-colors text-shadow-retro ${gameState === 'MEMORIZE' ? 'text-retro-green animate-pulse' : 'text-white'}`}>
+            {gameState === 'PREPARE' && "READY..."}
+            {gameState === 'MEMORIZE' && "WATCH"}
+            {gameState === 'RECALL' && "REPEAT"}
+            {gameState === 'RESULT' && "DONE"}
           </h3>
-          <p className="text-slate-400 text-xs">
-            {gameState === 'RECALL' ? "Ketuk kotak." : gameState === 'MEMORIZE' ? "Waktu Jeda" : "..."}
-          </p>
         </div>
 
-        {/* Responsive Grid Container */}
+        {/* Improved Retro Grid */}
         <div 
-          className="grid gap-1.5 md:gap-2 bg-slate-800 p-2 rounded-xl border border-slate-700 shadow-2xl transition-all duration-300 relative z-10 w-full max-w-[min(90vw,350px)] aspect-square"
+          className="grid gap-2 bg-slate-900 p-2 md:p-3 border-2 border-slate-600 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] transition-all duration-300 relative z-10 w-full max-w-[320px] aspect-square"
           style={{ 
             gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
             gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`
           }}
         >
           {Array.from({ length: gridSize * gridSize }).map((_, i) => {
-            let cellClass = "w-full h-full rounded-md md:rounded-lg transition-all duration-200 border-2 ";
+            // Strictly Square Cells
+            let cellClass = "w-full h-full transition-all duration-100 border-2 ";
             
             if (gameState === 'MEMORIZE') {
-              if (targetCells.includes(i)) cellClass += "bg-white border-white shadow-[0_0_15px_rgba(255,255,255,0.8)] scale-105 z-10";
-              else cellClass += "bg-slate-700 border-slate-600 opacity-50";
+              if (targetCells.includes(i)) cellClass += "bg-white border-white shadow-[0_0_15px_rgba(255,255,255,0.9)] z-10 scale-95";
+              else cellClass += "bg-slate-800 border-slate-700 opacity-40";
             } else if (gameState === 'RECALL') {
               if (selectedCells.includes(i)) {
-                if (targetCells.includes(i)) cellClass += "bg-emerald-500 border-emerald-400 shadow-lg scale-95 glow-success";
-                else cellClass += "bg-red-500 border-red-400 shake";
+                if (targetCells.includes(i)) cellClass += "bg-emerald-500 border-emerald-300 shadow-[inset_0_0_10px_rgba(0,0,0,0.3)]";
+                else cellClass += "bg-red-500 border-red-300 animate-shake";
               } else {
-                 cellClass += "bg-slate-700 border-slate-600 hover:border-neuro-500 cursor-pointer active:scale-95";
+                 cellClass += "bg-slate-800 border-slate-700 hover:border-neuro-400 hover:bg-slate-700 cursor-pointer active:bg-slate-600 active:border-slate-500";
               }
             } else {
-               cellClass += "bg-slate-700 border-slate-600";
+               cellClass += "bg-slate-800 border-slate-700";
             }
 
             return (

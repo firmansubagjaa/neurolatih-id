@@ -1,87 +1,96 @@
+
 import React, { useState, useEffect } from 'react';
-import { GameMode } from '../types';
+import { GameMode, Language } from '../types';
 import { Button } from './Shared';
 import { Play } from 'lucide-react';
 
 interface GameIntroProps {
   gameMode: GameMode;
   onStart: () => void;
+  language?: Language;
 }
 
 const FACTS: Record<string, string[]> = {
   [GameMode.SEQUENCE]: [
-    "PROSESOR LOGIKA: PENGENALAN POLA.",
-    "MENGAKTIFKAN LOBUS FRONTAL...",
-    "DETEKSI URUTAN ANGKA.",
-    "KECEPATAN ADALAH KUNCI."
+    "LOGIC PROCESSOR: PATTERN RECOGNITION",
+    "ACTIVATING FRONTAL LOBE...",
+    "DETECT NUMBER SEQUENCES.",
+    "VELOCITY IS KEY."
   ],
   [GameMode.PROBLEM]: [
-    "DIBUTUHKAN BERPIKIR LATERAL.",
-    "ANALISIS DATA. TEMUKAN SOLUSI.",
-    "ABAIKAN JALUR YANG JELAS.",
-    "BERPIKIR KRITIS: AKTIF."
+    "LATERAL THINKING REQUIRED.",
+    "ANALYZE DATA. FIND SOLUTION.",
+    "IGNORE OBVIOUS PATHS.",
+    "CRITICAL THINKING: ACTIVE."
   ],
   [GameMode.WORD]: [
-    "DATABASE SEMANTIK: MEMUAT...",
-    "HUBUNGKAN KONSEP ABSTRAK.",
-    "TES KELANCARAN VERBAL DIMULAI.",
-    "TEMUKAN KONEKSINYA."
+    "SEMANTIC DATABASE: LOADING...",
+    "LINK ABSTRACT CONCEPTS.",
+    "VERBAL FLUENCY TEST INITIATED.",
+    "FIND THE CONNECTION."
   ],
   [GameMode.MEMORY]: [
-    "BUFFER VISUAL: MEMBERSIHKAN...",
-    "MAKSIMALKAN MEMORI KERJA.",
-    "GUNAKAN STRATEGI CHUNKING.",
-    "PERTAHANKAN INTEGRITAS POLA."
+    "VISUAL BUFFER: FLUSHING...",
+    "MAXIMIZE WORKING MEMORY.",
+    "USE CHUNKING STRATEGIES.",
+    "MAINTAIN PATTERN INTEGRITY."
   ],
   [GameMode.N_BACK]: [
-    "PEMBARUAN MEMORI KERJA DIPERLUKAN.",
-    "LACAK STIMULUS MASA LALU.",
-    "FILTER INTERFERENSI.",
-    "KECERDASAN CAIR: AKTIF."
+    "WORKING MEMORY UPDATE REQUIRED.",
+    "TRACK PAST STIMULI.",
+    "FILTER INTERFERENCE.",
+    "FLUID INTELLIGENCE: ACTIVE."
   ],
   [GameMode.COLOR_MATCH]: [
-    "KONTROL INHIBISI: ONLINE.",
-    "TEKAN PEMBACAAN OTOMATIS.",
-    "FOKUS PADA PERSEPSI WARNA.",
-    "EFEK STROOP TERDETEKSI."
+    "INHIBITION CONTROL: ONLINE.",
+    "SUPPRESS AUTOMATIC READING.",
+    "FOCUS ON COLOR PERCEPTION.",
+    "STROOP EFFECT DETECTED."
   ],
   [GameMode.MATH_RUSH]: [
-    "PROSESOR ARITMATIKA: OVERCLOCKING...",
-    "HITUNG DENGAN KECEPATAN MAKSIMAL.",
-    "PERTAHANKAN AKURASI DI BAWAH TEKANAN.",
-    "SINAPSIS SARAF MENEMBAK CEPAT."
+    "ARITHMETIC PROCESSOR: OVERCLOCKING...",
+    "CALCULATE AT MAX SPEED.",
+    "MAINTAIN ACCURACY UNDER PRESSURE.",
+    "NEURAL SYNAPSES FIRING."
   ],
   [GameMode.ANAGRAM]: [
-    "DEKRIPSI LINGUISTIK: DIMULAI.",
-    "SUSUN ULANG KARAKTER.",
-    "AKSES BANK KOSAKATA.",
-    "KECEPATAN PEMROSESAN VERBAL."
+    "LINGUISTIC DECRYPTION: STARTED.",
+    "REARRANGE CHARACTERS.",
+    "ACCESS VOCABULARY BANK.",
+    "VERBAL PROCESSING SPEED."
   ],
   [GameMode.VISUAL_SEARCH]: [
-    "PINDAI KORTEKS VISUAL: DIMULAI.",
-    "ISOLASI ANOMALI.",
-    "MEMINDAI SEKTOR GRID...",
-    "TES ATENSI SELEKTIF."
+    "SCAN VISUAL CORTEX: INITIATED.",
+    "ISOLATE ANOMALIES.",
+    "SCANNING GRID SECTORS...",
+    "SELECTIVE ATTENTION TEST."
   ],
   [GameMode.NAVIGATION]: [
-    "ORIENTASI SPASIAL: KALIBRASI...",
-    "PEMETAAN KOORDINAT VIRTUAL.",
-    "PERBARUI VEKTOR ARAH.",
-    "SKETSA VISUOSPASIAL AKTIF."
+    "SPATIAL ORIENTATION: CALIBRATING...",
+    "MAPPING VIRTUAL COORDINATES.",
+    "UPDATE DIRECTION VECTORS.",
+    "VISUOSPATIAL SKETCHPAD ACTIVE."
   ],
   [GameMode.TASK_SWITCH]: [
-    "PROTOKOL MULTITASKING: DIMULAI.",
-    "FLEKSIBILITAS KOGNITIF DIPERLUKAN.",
-    "ADAPTASI PERUBAHAN ATURAN.",
-    "HINDARI KESALAHAN PERSEVERASI."
+    "MULTITASKING PROTOCOL: STARTED.",
+    "COGNITIVE FLEXIBILITY REQUIRED.",
+    "ADAPT TO RULE CHANGES.",
+    "AVOID PERSEVERATION ERRORS."
+  ],
+  [GameMode.PATHFINDING]: [
+    "PATH PLANNING SIMULATION.",
+    "VISUALIZE ROUTE IN MEMORY.",
+    "AVOID SPATIAL OBSTACLES.",
+    "EXECUTE MOTION ALGORITHM."
   ]
 };
 
-export const GameIntro: React.FC<GameIntroProps> = ({ gameMode, onStart }) => {
+export const GameIntro: React.FC<GameIntroProps> = ({ gameMode, onStart, language = 'ID' }) => {
   const [countdown, setCountdown] = useState(3);
   const [fact, setFact] = useState("");
 
   useEffect(() => {
+    // Simplified facts for now, defaulting to EN logic/ID keys if simple
     const modeFacts = FACTS[gameMode] || FACTS[GameMode.PROBLEM];
     setFact(modeFacts[Math.floor(Math.random() * modeFacts.length)]);
 
@@ -99,33 +108,36 @@ export const GameIntro: React.FC<GameIntroProps> = ({ gameMode, onStart }) => {
   }, [gameMode]);
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/95">
-      <div className="w-full max-w-md border-4 border-retro-green bg-black p-1 shadow-[0_0_20px_rgba(51,255,0,0.2)]">
-        <div className="border-2 border-dashed border-slate-700 p-6 flex flex-col items-center text-center">
+    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-black border-4 border-retro-green p-1 shadow-[0_0_20px_rgba(74,222,128,0.3)]">
+        <div className="border-2 border-dashed border-slate-700 p-8 flex flex-col items-center text-center relative overflow-hidden">
             
-            <h2 className="text-xl md:text-2xl font-pixel text-white mb-6 uppercase animate-pulse">
-                BRIEFING MISI
+            {/* Scanline overlay inside card */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none opacity-20"></div>
+
+            <h2 className="text-xl md:text-3xl font-pixel text-white mb-6 uppercase animate-pulse">
+                {language === 'ID' ? 'MISSION BRIEF' : 'MISSION BRIEF'}
             </h2>
 
-            <div className="w-full bg-slate-900 border border-slate-600 p-4 mb-8 font-mono text-retro-green min-h-[100px] flex items-center justify-center">
-                <p className="typing-effect text-sm md:text-base">
-                  {">"} {fact}<span className="animate-blink">_</span>
+            <div className="w-full bg-slate-900 border border-slate-600 p-6 mb-8 font-mono text-retro-green min-h-[120px] flex items-center justify-center shadow-inner">
+                <p className="typing-effect text-sm md:text-lg leading-relaxed">
+                  {">"} {fact}<span className="animate-blink block w-3 h-5 bg-retro-green mx-auto mt-2"></span>
                 </p>
             </div>
 
-            <div className="mb-6">
+            <div className="mb-2 w-full">
                 {countdown > 0 ? (
-                    <div className="text-6xl font-pixel text-retro-yellow animate-bounce">
+                    <div className="text-8xl font-pixel text-retro-yellow animate-ping opacity-80">
                         {countdown}
                     </div>
                 ) : (
-                    <Button onClick={onStart} className="w-full py-4 text-lg md:text-xl animate-blink bg-retro-red border-retro-red text-white">
-                        MULAI MISI <Play className="w-5 h-5 ml-2 fill-current" />
+                    <Button onClick={onStart} className="w-full py-4 text-xl md:text-2xl bg-retro-red border-white hover:bg-white hover:text-retro-red animate-pulse">
+                        START <Play className="w-6 h-6 ml-2 fill-current" />
                     </Button>
                 )}
             </div>
             
-            {countdown > 0 && <div className="text-xs font-mono text-slate-500">MEMUAT MODUL NEURO...</div>}
+            {countdown > 0 && <div className="text-xs font-mono text-slate-500 mt-8">INITIALIZING NEURAL LINK...</div>}
         </div>
       </div>
     </div>

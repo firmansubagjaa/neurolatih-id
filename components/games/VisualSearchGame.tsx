@@ -140,26 +140,31 @@ const VisualSearchGame: React.FC<VisualSearchGameProps> = ({ difficulty, onEndGa
         isOpen={showTutorial} 
         onClose={() => setShowTutorial(false)}
         title="Cara Bermain: Mata Elang"
-        content={["Cari satu simbol yang berbeda.", "Grid akan semakin padat.", "Kecepatan adalah kunci."]}
+        content={[
+            "Cari satu simbol yang berbeda.", 
+            ...(isQuickMode ? ["MODE CEPAT: Waktu berjalan lebih cepat!"] : []), // Fixed bug
+            "Grid akan semakin padat.", 
+            "Kecepatan adalah kunci."
+        ]}
         icon={<Scan className="w-6 h-6" />}
       />
       <QuitModal isOpen={showQuitModal} onConfirm={() => { setShowQuitModal(false); onBack(); }} onCancel={() => setShowQuitModal(false)} />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleBackRequest} className="!px-2">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
+            <Button variant="ghost" onClick={handleBackRequest} className="!px-3 text-sm">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
             <Tooltip text="ATURAN MAIN">
-                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400"><HelpCircle className="w-5 h-5" /></Button>
+                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-3 text-neuro-400"><HelpCircle className="w-5 h-5" /></Button>
             </Tooltip>
          </div>
          <Badge color="bg-retro-green">Lvl {level}</Badge>
       </div>
 
-      <Card className="flex flex-col items-center">
+      <Card className="flex flex-col items-center p-6 md:p-8">
          <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
          
          <div 
-            className="grid gap-1 bg-slate-900 p-2 rounded-xl border border-slate-700 w-full aspect-square max-w-[350px]"
+            className="grid gap-2 bg-slate-900 p-4 rounded-xl border border-slate-700 w-full aspect-square max-w-[400px]"
             style={{ 
                 gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
                 gridTemplateRows: `repeat(${gridSize}, 1fr)`
@@ -169,7 +174,7 @@ const VisualSearchGame: React.FC<VisualSearchGameProps> = ({ difficulty, onEndGa
                 <button 
                     key={i} 
                     onClick={() => handleClick(i)}
-                    className="w-full h-full bg-slate-800 hover:bg-slate-700 rounded flex items-center justify-center font-mono text-lg md:text-2xl text-white transition-colors active:scale-95"
+                    className="w-full h-full bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center font-mono text-2xl md:text-4xl text-white transition-colors active:scale-95"
                 >
                     {item}
                 </button>

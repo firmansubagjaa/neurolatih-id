@@ -1,33 +1,57 @@
+
 import React from 'react';
 import { Button } from './Shared';
 import { AlertTriangle } from 'lucide-react';
+import { getTranslation } from '../services/languageService';
+import { Language } from '../types';
 
 interface QuitModalProps {
   isOpen: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  language?: Language;
 }
 
-export const QuitModal: React.FC<QuitModalProps> = ({ isOpen, onConfirm, onCancel }) => {
+export const QuitModal: React.FC<QuitModalProps> = ({ isOpen, onConfirm, onCancel, language = 'ID' }) => {
   if (!isOpen) return null;
+  const t = (k: string) => getTranslation(language, k);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-800 border border-white/10 rounded-2xl max-w-sm w-full p-6 shadow-2xl transform transition-all scale-100 text-center animate-fade-in-up">
-        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
-           <AlertTriangle className="w-8 h-8 text-red-500" />
-        </div>
-        <h2 className="text-xl font-bold text-white mb-2">Keluar Permainan?</h2>
-        <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-          Apakah kamu yakin? Progres permainan saat ini tidak akan disimpan.
-        </p>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={onCancel} className="flex-1 justify-center bg-slate-700 hover:bg-slate-600">
-            Tidak
-          </Button>
-          <Button variant="danger" onClick={onConfirm} className="flex-1 justify-center shadow-lg shadow-red-900/20">
-            Ya, Keluar
-          </Button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-sm bg-black border-4 border-white shadow-[8px_8px_0_0_rgba(255,255,255,0.2)] p-1 transform transition-all scale-100">
+        <div className="border-2 border-dashed border-slate-700 p-6 flex flex-col items-center text-center">
+            
+            <div className="mb-4 text-retro-red animate-bounce">
+                <AlertTriangle className="w-12 h-12" />
+            </div>
+
+            <h2 className="text-xl md:text-2xl font-pixel text-white mb-2 uppercase text-shadow-retro leading-tight">
+                {t('quitTitle')}
+            </h2>
+            
+            <div className="w-full h-px bg-slate-700 my-4"></div>
+
+            <p className="font-mono text-slate-300 text-sm md:text-base mb-8 leading-relaxed">
+              {t('quitConfirm')}
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <Button 
+                variant="secondary" 
+                onClick={onCancel} 
+                className="justify-center border-slate-500 text-slate-300 hover:text-white"
+              >
+                {t('cancel')}
+              </Button>
+              <Button 
+                variant="danger" 
+                onClick={onConfirm} 
+                className="justify-center"
+              >
+                {t('exit')}
+              </Button>
+            </div>
+
         </div>
       </div>
     </div>

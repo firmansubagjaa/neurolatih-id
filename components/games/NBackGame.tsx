@@ -31,7 +31,7 @@ const GridItem = React.memo(({ isActive }: { isActive: boolean }) => (
        <div className="absolute inset-0 bg-white/20 animate-pulse rounded-xl"></div>
     )}
     {!isActive && (
-       <div className="w-1.5 h-1.5 rounded-full bg-slate-700/50"></div>
+       <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-slate-700/50"></div>
     )}
   </div>
 ));
@@ -188,7 +188,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto relative">
+    <div className="w-full max-w-xl mx-auto relative">
       {!introFinished && (
         <GameIntro 
           gameMode={GameMode.N_BACK} 
@@ -210,6 +210,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
           `Sebuah kotak akan menyala secara berurutan.`,
           `Tekan "SAMA" jika posisi kotak SAMA dengan posisi ${N_VALUE} langkah sebelumnya.`,
           `Tekan "BEDA" jika berbeda.`,
+          ...(isQuickMode ? ["MODE CEPAT: Waktu berkurang lebih cepat!"] : []), // Fixed bug
           `Jangan hafalkan semua, cukup "Working Memory" jangka pendek.`
         ]}
         icon={<BrainCircuit className="w-6 h-6" />}
@@ -223,9 +224,9 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
 
       <div className="flex justify-between items-center mb-6">
          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleBackRequest} className="!px-2">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
+            <Button variant="ghost" onClick={handleBackRequest} className="!px-3 text-sm">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
             <Tooltip text="ATURAN MAIN">
-                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400">
+                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-3 text-neuro-400">
                     <HelpCircle className="w-5 h-5" />
                 </Button>
             </Tooltip>
@@ -233,12 +234,12 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
          <Badge color="bg-purple-500">Target: {N_VALUE}-Back</Badge>
       </div>
 
-      <Card className="flex flex-col items-center">
+      <Card className="flex flex-col items-center p-6 md:p-8">
         <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
         
         {!isPracticeMode && (
           <div className="flex justify-center mb-6">
-             <div className={`text-6xl font-mono font-bold tracking-tighter transition-all duration-300 ${
+             <div className={`text-6xl md:text-8xl font-mono font-bold tracking-tighter transition-all duration-300 ${
                 timeLeft <= 10 ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse scale-110' : 
                 timeLeft <= 20 ? 'text-yellow-400' : 'text-white'
              }`}>
@@ -247,17 +248,17 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
           </div>
         )}
         
-        <div className="mb-4 text-center">
-            <h3 className="text-2xl font-bold text-white">
+        <div className="mb-6 text-center">
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-2">
                 {currentIndex < N_VALUE ? "Perhatikan..." : "Bandingkan!"}
             </h3>
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-base md:text-lg">
                 Apakah sama dengan {N_VALUE} langkah lalu?
             </p>
         </div>
 
         {/* Optimized Grid Render */}
-        <div className="grid grid-cols-3 gap-3 bg-slate-900 p-4 rounded-2xl border border-slate-700 shadow-inner mb-8 relative w-full max-w-[320px] mx-auto aspect-square">
+        <div className="grid grid-cols-3 gap-3 md:gap-4 bg-slate-900 p-6 rounded-2xl border border-slate-700 shadow-inner mb-8 relative w-full max-w-[350px] mx-auto aspect-square">
            {Array.from({ length: 9 }).map((_, i) => (
              <GridItem key={i} isActive={i === currentGridPos} />
            ))}
@@ -266,40 +267,40 @@ const NBackGame: React.FC<NBackGameProps> = ({ difficulty, onEndGame, onBack, is
              <div className={`absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl backdrop-blur-sm transition-all duration-300 animate-fade-in
                 ${feedback === 'CORRECT' ? 'bg-emerald-950/80' : 'bg-red-950/80'}
              `}>
-                <div className={`p-4 rounded-full mb-3 shadow-2xl ${feedback === 'CORRECT' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'} transform scale-110`}>
+                <div className={`p-5 rounded-full mb-4 shadow-2xl ${feedback === 'CORRECT' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'} transform scale-110`}>
                     {feedback === 'CORRECT' ? (
-                        <Check className="w-12 h-12" />
+                        <Check className="w-16 h-16" />
                     ) : (
-                        <X className="w-12 h-12" />
+                        <X className="w-16 h-16" />
                     )}
                 </div>
-                <span className={`text-3xl font-black tracking-widest uppercase drop-shadow-md ${feedback === 'CORRECT' ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-4xl md:text-5xl font-black tracking-widest uppercase drop-shadow-md ${feedback === 'CORRECT' ? 'text-emerald-400' : 'text-red-400'}`}>
                     {feedback === 'CORRECT' ? 'Tepat!' : 'Salah!'}
                 </span>
              </div>
            )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4 w-full">
+        <div className="grid grid-cols-2 gap-4 md:gap-6 w-full">
            <Button 
              variant="danger" 
-             className="h-16 text-lg !text-white !border-white/20"
+             className="h-20 text-xl !text-white !border-white/20"
              disabled={currentIndex < N_VALUE || feedback !== null || (!isPracticeMode && timeLeft <= 0)}
              onClick={() => handleResponse(false)}
            >
-             <X className="w-5 h-5 mr-2" /> BEDA
+             <X className="w-6 h-6 mr-3" /> BEDA
            </Button>
            <Button 
              variant="primary" 
-             className="h-16 text-lg bg-emerald-600 hover:bg-emerald-500 border-emerald-400 !text-white"
+             className="h-20 text-xl bg-emerald-600 hover:bg-emerald-500 border-emerald-400 !text-white"
              disabled={currentIndex < N_VALUE || feedback !== null || (!isPracticeMode && timeLeft <= 0)}
              onClick={() => handleResponse(true)}
            >
-             <Check className="w-5 h-5 mr-2" /> SAMA
+             <Check className="w-6 h-6 mr-3" /> SAMA
            </Button>
         </div>
         
-        <div className="mt-4 text-xs text-slate-500">
+        <div className="mt-6 text-sm text-slate-500">
            Skor: {score} | Langkah: {currentIndex + 1}
         </div>
       </Card>

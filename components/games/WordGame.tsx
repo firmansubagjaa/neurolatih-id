@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, WordAssociationQuestion, GameResult, GameMode } from '../../types';
 import { generateWordAssociation } from '../../services/geminiService';
@@ -83,9 +82,6 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
 
   // Hardcore Timer Logic
   useEffect(() => {
-    // Timer keeps running during loading
-    // Stops for Tutorial or Quit Modal
-    // DISABLED in Practice Mode
     if (!isPracticeMode && gameActive && introFinished && !showTutorial && !showQuitModal && timeLeft > 0) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
@@ -193,14 +189,14 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
   if (!gameActive) return null;
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6 relative">
+    <div className="w-full max-w-3xl mx-auto space-y-6 relative">
       {!introFinished && (
         <GameIntro 
           gameMode={GameMode.WORD} 
           onStart={() => {
             playSound('click');
             setIntroFinished(true);
-            setShowTutorial(true); // Tutorial triggered
+            setShowTutorial(true); 
           }} 
         />
       )}
@@ -212,6 +208,7 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
         title="Cara Bermain: Asosiasi Kata"
         content={[
           "Total waktu 50 Detik (Kecuali Mode Latihan).",
+          ...(isQuickMode ? ["MODE CEPAT: Waktu berkurang 2x lebih cepat!"] : []), 
           "Waktu BERJALAN TERUS saat memuat soal.",
           "Pilih 3 kata yang sesuai kategori secepatnya.",
           "Sistem otomatis lanjut setelah Anda menekan Cek Jawaban."
@@ -227,11 +224,11 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
 
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div className="flex gap-2 w-full md:w-auto">
-          <Button variant="ghost" onClick={handleBackRequest} className="!px-2">
+          <Button variant="ghost" onClick={handleBackRequest} className="!px-3 text-sm">
             &larr; {isPracticeMode ? "Selesai" : "Keluar"}
           </Button>
-          <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400 hover:text-white">
-            <HelpCircle className="w-5 h-5 mr-1" /> Cara Main
+          <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-3 text-neuro-400 hover:text-white text-sm">
+            <HelpCircle className="w-5 h-5 mr-2" /> Cara Main
           </Button>
         </div>
         <div className="flex gap-4">
@@ -240,16 +237,16 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
         </div>
       </div>
 
-      <div className="relative min-h-[400px]">
+      <div className="relative min-h-[500px]">
          {/* Global Timer Bar */}
-         <Card className="mb-4 py-3 px-4 bg-slate-800/80 border-slate-700">
+         <Card className="mb-6 py-3 px-4 bg-slate-800/80 border-slate-700">
            <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
         </Card>
 
         {/* Large Prominent Timer */}
         {!isPracticeMode && (
           <div className="flex justify-center mb-6">
-            <div className={`text-6xl font-mono font-bold tracking-tighter transition-all duration-300 ${
+            <div className={`text-6xl md:text-8xl font-mono font-bold tracking-tighter transition-all duration-300 ${
                 timeLeft <= 10 ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse scale-110' : 
                 timeLeft <= 20 ? 'text-yellow-400' : 'text-white'
             }`}>
@@ -261,28 +258,28 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
         {loading ? (
           <Card className="flex flex-col items-center justify-center h-80 animate-pulse">
             <NeuralLoader message="AI sedang mencari hubungan kata..." />
-            {!isPracticeMode && <p className="text-xs text-slate-500 mt-4 animate-pulse">Waktu terus berjalan...</p>}
+            {!isPracticeMode && <p className="text-sm text-slate-500 mt-4 animate-pulse">Waktu terus berjalan...</p>}
           </Card>
         ) : currentQuestion ? (
-          <Card className="border-t-4 border-t-orange-500 animate-fade-in-up">
+          <Card key={currentQuestion.category} className="border-t-4 border-t-orange-500 animate-fade-in-up p-8">
             
-            <div className="flex flex-col items-center mb-8 text-center">
+            <div className="flex flex-col items-center mb-10 text-center">
               <div className="p-4 bg-orange-900/30 rounded-full mb-4 ring-2 ring-orange-500/20">
-                <BookOpen className="w-10 h-10 text-orange-400" />
+                <BookOpen className="w-12 h-12 text-orange-400" />
               </div>
-              <p className="text-slate-400 uppercase tracking-widest text-xs font-bold mb-2">KATEGORI</p>
-              <h3 className="text-2xl font-bold text-white leading-relaxed bg-slate-800/50 px-8 py-3 rounded-xl border border-white/5 inline-block">
+              <p className="text-slate-400 uppercase tracking-widest text-sm font-bold mb-3">KATEGORI</p>
+              <h3 className="text-3xl md:text-4xl font-bold text-white leading-relaxed bg-slate-800/50 px-10 py-4 rounded-xl border border-white/5 inline-block">
                 {currentQuestion.category}
               </h3>
-              <p className="text-slate-400 text-sm mt-4">Pilih 3 kata yang berhubungan</p>
+              <p className="text-slate-300 text-base md:text-lg mt-5 font-medium">Pilih 3 kata yang berhubungan</p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
               {shuffledWords.map((word, idx) => {
                 const isSelected = selectedWords.includes(word);
                 const isCorrect = currentQuestion.correctWords.includes(word);
                 
-                let btnClass = "h-20 p-2 rounded-xl border-2 transition-all flex items-center justify-center text-center font-bold text-sm md:text-base relative overflow-hidden ";
+                let btnClass = "h-24 md:h-28 p-3 rounded-xl border-2 transition-all flex items-center justify-center text-center font-bold text-base md:text-xl relative overflow-hidden ";
                 
                 if (isSubmitted) {
                    if (isCorrect) {
@@ -296,7 +293,7 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
                     if (isSelected) {
                         btnClass += "bg-orange-500/20 border-orange-500 text-orange-100 scale-105 shadow-lg shadow-orange-500/20";
                     } else {
-                        btnClass += "bg-slate-800 border-slate-700 text-slate-300 hover:border-orange-500/50 hover:bg-slate-700";
+                        btnClass += "bg-slate-800 border-slate-700 text-slate-300 hover:border-orange-500/50 hover:bg-slate-700 hover:text-white cursor-pointer";
                     }
                 }
 
@@ -308,8 +305,8 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
                     className={btnClass}
                   >
                     <span className="relative z-10">{word}</span>
-                    {isSubmitted && isCorrect && <CheckCircle className="absolute top-1 right-1 w-4 h-4 text-emerald-500" />}
-                    {isSubmitted && isSelected && !isCorrect && <XCircle className="absolute top-1 right-1 w-4 h-4 text-red-500" />}
+                    {isSubmitted && isCorrect && <CheckCircle className="absolute top-2 right-2 w-6 h-6 text-emerald-500" />}
+                    {isSubmitted && isSelected && !isCorrect && <XCircle className="absolute top-2 right-2 w-6 h-6 text-red-500" />}
                   </button>
                 );
               })}
@@ -321,17 +318,17 @@ const WordGame: React.FC<WordGameProps> = ({ difficulty, onEndGame, onBack, isQu
                         onClick={handleSubmit} 
                         disabled={selectedWords.length !== 3}
                         variant={selectedWords.length === 3 ? 'primary' : 'secondary'}
-                        className={`w-full md:w-auto min-w-[200px] ${selectedWords.length === 3 ? '!text-black' : '!text-retro-cyan'}`}
+                        className={`w-full md:w-auto min-w-[240px] text-lg py-4 ${selectedWords.length === 3 ? '!text-black' : '!text-retro-cyan'}`}
                     >
                         Cek Jawaban ({selectedWords.length}/3)
                     </Button>
                </div>
             ) : (
               <div className="animate-fade-in">
-                 <div className={`p-4 rounded-lg mb-4 text-sm flex items-start gap-3 border bg-orange-900/20 border-orange-500/30 text-orange-200`}>
-                    <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
+                 <div className={`p-6 rounded-lg mb-4 text-base md:text-lg flex items-start gap-4 border bg-orange-900/20 border-orange-500/30 text-orange-200`}>
+                    <Sparkles className="w-6 h-6 shrink-0 mt-1" />
                     <div>
-                         <p>{currentQuestion.explanation}</p>
+                         <p className="leading-relaxed">{currentQuestion.explanation}</p>
                     </div>
                  </div>
               </div>

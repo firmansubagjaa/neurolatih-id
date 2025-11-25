@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Difficulty, GameResult, GameMode } from '../../types';
 import { startMusic, stopMusic, playSound } from '../../services/audioService';
@@ -169,7 +170,7 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
   if (!gameActive) return null;
 
   return (
-    <div className="w-full max-w-lg mx-auto relative">
+    <div className="w-full max-w-2xl mx-auto relative">
       {!introFinished && (
         <GameIntro 
           gameMode={GameMode.COLOR_MATCH} 
@@ -189,7 +190,7 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
         content={[
           "Abaikan TULISAN katanya.",
           "Fokus pada WARNA tintanya.",
-          isQuickMode ? "MODE CEPAT AKTIF: Waktu menipis 2x lebih cepat!" : "",
+          ...(isQuickMode ? ["MODE CEPAT AKTIF: Waktu menipis 2x lebih cepat!"] : []), // Fixed bug
           "Jika tulisan 'MERAH' tapi berwarna BIRU, tekan tombol BIRU.",
           "Melatih Inhibisi (menekan respon otomatis)."
         ]}
@@ -202,11 +203,11 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
         onCancel={() => setShowQuitModal(false)}
       />
 
-       <div className="flex justify-between items-center mb-4 md:mb-6">
+       <div className="flex justify-between items-center mb-6">
          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleBackRequest} className="!px-2 text-sm">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
+            <Button variant="ghost" onClick={handleBackRequest} className="!px-3 text-sm">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
             <Tooltip text="ATURAN MAIN">
-                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400">
+                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-3 text-neuro-400">
                     <HelpCircle className="w-5 h-5" />
                 </Button>
             </Tooltip>
@@ -217,12 +218,12 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
          </div>
       </div>
 
-      <Card className="flex flex-col items-center">
+      <Card className="flex flex-col items-center p-6 md:p-8">
          <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
 
          {!isPracticeMode && (
            <div className="flex justify-center mb-6">
-             <div className={`text-5xl md:text-6xl font-mono font-bold tracking-tighter transition-all duration-300 ${
+             <div className={`text-6xl md:text-8xl font-mono font-bold tracking-tighter transition-all duration-300 ${
                 timeLeft <= 10 ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse scale-110' : 
                 timeLeft <= 20 ? 'text-yellow-400' : 'text-white'
              }`}>
@@ -231,23 +232,23 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
           </div>
          )}
 
-         <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[160px] md:min-h-[200px] mb-6 bg-slate-800/50 rounded-2xl border border-white/5 relative overflow-hidden px-2">
-             <div className="text-[10px] md:text-xs text-slate-500 uppercase tracking-widest font-bold mb-4">Warna Apa Ini?</div>
+         <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[200px] mb-8 bg-slate-800/50 rounded-2xl border border-white/5 relative overflow-hidden px-4">
+             <div className="text-sm md:text-base text-slate-500 uppercase tracking-widest font-bold mb-4">Warna Apa Ini?</div>
              <h1 
-                className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight drop-shadow-2xl transition-all duration-200 transform hover:scale-105 break-all text-center"
+                className="text-6xl sm:text-7xl md:text-9xl font-black tracking-tight drop-shadow-2xl transition-all duration-200 transform hover:scale-105 break-all text-center"
                 style={{ color: inkColor.value, textShadow: `0 0 30px ${inkColor.value}40` }}
              >
                 {currentWord.name}
              </h1>
          </div>
 
-         <div className="grid grid-cols-2 gap-3 w-full">
+         <div className="grid grid-cols-2 gap-4 w-full">
             {options.map((opt, idx) => (
                 <button
                     key={idx}
                     onClick={() => handleAnswer(opt.label)}
                     disabled={(!isPracticeMode && timeLeft <= 0)}
-                    className="py-4 md:py-6 rounded-xl bg-slate-800 border-2 border-slate-700 hover:border-white/50 hover:bg-slate-700 transition-all active:scale-95 font-bold text-sm md:text-lg text-white shadow-lg relative overflow-hidden group"
+                    className="py-6 rounded-xl bg-slate-800 border-2 border-slate-700 hover:border-white/50 hover:bg-slate-700 transition-all active:scale-95 font-bold text-lg md:text-2xl text-white shadow-lg relative overflow-hidden group"
                 >
                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
                     {opt.name}
@@ -255,7 +256,7 @@ const ColorMatchGame: React.FC<ColorMatchGameProps> = ({ difficulty, onEndGame, 
             ))}
          </div>
          
-         <div className="mt-4 md:mt-6 flex justify-between w-full text-[10px] md:text-xs text-slate-500 px-2">
+         <div className="mt-6 flex justify-between w-full text-xs md:text-sm text-slate-500 px-2">
             <span>Benar: {correctAnswers}</span>
             <span>Total: {questionsAnswered}</span>
          </div>

@@ -8,7 +8,7 @@ import { QuitModal } from '../QuitModal';
 import { Confetti } from '../Confetti';
 import { CountdownBar } from '../CountdownBar';
 import { GameIntro } from '../GameIntro';
-import { CheckCircle, XCircle, Lightbulb, HelpCircle, Zap } from 'lucide-react';
+import { CheckCircle, XCircle, Lightbulb, HelpCircle, Zap, Brain } from 'lucide-react';
 
 interface LogicGameProps {
   difficulty: Difficulty;
@@ -31,7 +31,6 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
   const [showConfetti, setShowConfetti] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
   
-  // GLOBAL TIMER STATE
   const TOTAL_TIME = 50;
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   
@@ -60,9 +59,8 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
 
   useEffect(() => {
     isMountedRef.current = true;
-    startMusic('FOCUS'); // Focus/Analysis Music
+    startMusic('FOCUS');
     fetchNextQuestion(); 
-    
     return () => {
       isMountedRef.current = false;
       stopMusic();
@@ -74,7 +72,6 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
     if (!isPracticeMode && gameActive && introFinished && !showTutorial && !showQuitModal && timeLeft > 0) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
-          // Double speed decrement if Quick Mode is active
           const decrement = isQuickMode ? 0.2 : 0.1;
           const newVal = Math.max(0, prev - decrement);
           if (newVal <= 0) {
@@ -87,7 +84,6 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
@@ -151,7 +147,7 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
   if (!gameActive) return null;
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4 relative">
+    <div className="w-full max-w-2xl mx-auto space-y-3 relative">
       {!introFinished && (
         <GameIntro 
           gameMode={GameMode.PROBLEM} 
@@ -169,11 +165,9 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
         onClose={() => setShowTutorial(false)}
         title="Cara Bermain: Logika Masalah"
         content={[
-          "Anda memiliki waktu total 50 Detik.",
-          isQuickMode ? "MODE CEPAT AKTIF: Waktu berjalan 2x lebih cepat!" : "",
           "Pecahkan teka-teki logika lateral.",
           "Pilih jawaban yang paling masuk akal.",
-          "Soal dihasilkan secara acak dari database sistem."
+          isQuickMode ? "MODE CEPAT: Waktu berjalan 2x!" : "Jawab sebelum waktu habis."
         ]}
         icon={<Lightbulb className="w-6 h-6" />}
       />
@@ -184,67 +178,65 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
         onCancel={() => setShowQuitModal(false)}
       />
 
-      <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
-        <div className="flex gap-2 w-full md:w-auto">
-          <Button variant="ghost" onClick={handleBackRequest} className="!px-2 text-xs">
-            &larr; {isPracticeMode ? "Selesai" : "Keluar"}
+      {/* Header Controls */}
+      <div className="flex flex-row justify-between items-center gap-2">
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={handleBackRequest} className="!px-2 text-xs md:text-sm">
+            &larr; Keluar
           </Button>
-          <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400 hover:text-white text-xs">
-            <HelpCircle className="w-4 h-4 mr-1" /> Cara Main
+          <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400 hover:text-white text-xs md:text-sm">
+            <HelpCircle className="w-4 h-4 mr-1" /> Info
           </Button>
         </div>
-        <div className="flex gap-2 md:gap-4 flex-wrap justify-end">
-          {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED x2</Badge>}
-          <Badge color="bg-indigo-500">{difficulty}</Badge>
-          <Badge color="bg-emerald-500">Skor: {score}</Badge>
+        <div className="flex gap-2 items-center">
+          {isQuickMode && <Badge color="bg-yellow-500 animate-pulse text-black"><Zap className="w-3 h-3 mr-1 inline" /> SPEED</Badge>}
+          <Badge color="bg-emerald-500">Pts: {score}</Badge>
         </div>
       </div>
 
-      <div className="relative min-h-[350px]">
-        <Card className="mb-4 py-2 px-3 bg-slate-800/80 border-slate-700">
+      <div className="relative min-h-[400px]">
+        {/* Timer Bar */}
+        <Card className="mb-4 py-2 px-3 bg-slate-800 border-slate-700">
            <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
+           {!isPracticeMode && (
+              <div className="text-center font-mono font-bold text-2xl md:text-3xl text-white mt-1">
+                {timeLeft.toFixed(1)}s
+              </div>
+           )}
         </Card>
-
-        {!isPracticeMode && (
-          <div className="flex justify-center mb-4">
-            <div className={`text-5xl font-mono font-bold tracking-tighter transition-all duration-300 ${
-                timeLeft <= 10 ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse scale-110' : 
-                timeLeft <= 20 ? 'text-yellow-400' : 'text-white'
-            }`}>
-              {timeLeft.toFixed(1)}
-            </div>
-          </div>
-        )}
 
         {loading ? (
           <Card className="flex flex-col items-center justify-center h-64 animate-pulse">
-            <NeuralLoader message="Mengakses Bank Data Logika..." />
+            <NeuralLoader message="LOADING DATA..." />
           </Card>
         ) : currentQuestion ? (
-          <Card className="border-t-4 border-t-indigo-500 animate-fade-in-up">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="p-2 bg-indigo-900/50 rounded-lg shrink-0">
-                <Lightbulb className="w-6 h-6 text-indigo-400" />
+          <div key={currentQuestion.question} className="animate-fade-in-up">
+            
+            {/* Question Container */}
+            <div className="bg-black border-4 border-white p-5 md:p-6 mb-4 relative shadow-[8px_8px_0px_0px_rgba(50,50,50,1)]">
+              <div className="absolute -top-3 left-4 bg-black px-2 text-retro-cyan font-pixel text-xs flex items-center gap-1 border border-retro-cyan">
+                 <Brain className="w-3 h-3" /> QUERY_DATA
               </div>
-              <div>
-                <h3 className="text-lg md:text-xl font-bold text-white leading-relaxed">
-                  {currentQuestion.question}
-                </h3>
-              </div>
+              <h3 className="text-lg md:text-xl font-mono text-white leading-relaxed mt-2">
+                {currentQuestion.question}
+              </h3>
             </div>
 
-            <div className="grid gap-2 mb-4">
+            {/* Options Grid */}
+            <div className="grid gap-3">
               {currentQuestion.options.map((option, idx) => {
-                let btnClass = "text-left p-3 rounded-lg border border-white/10 transition-all hover:bg-white/5 text-sm md:text-base";
+                let btnClass = "text-left p-3 md:p-4 border-2 md:border-4 transition-all text-sm md:text-base font-bold font-pixel relative group ";
                 
                 if (selectedOption !== null) {
                   if (idx === currentQuestion.correctAnswerIndex) {
-                    btnClass = "text-left p-3 rounded-lg border border-emerald-500 bg-emerald-500/20 text-emerald-100 glow-success text-sm md:text-base";
+                    btnClass += "bg-emerald-900 border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]";
                   } else if (idx === selectedOption) {
-                    btnClass = "text-left p-3 rounded-lg border border-red-500 bg-red-500/20 text-red-100 text-sm md:text-base";
+                    btnClass += "bg-red-900 border-red-400 text-white";
                   } else {
-                    btnClass = "text-left p-3 rounded-lg border border-white/5 opacity-50 text-sm md:text-base";
+                    btnClass += "bg-slate-900 border-slate-800 opacity-40";
                   }
+                } else {
+                    btnClass += "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-retro-cyan hover:text-white hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,255,255,0.2)] active:translate-y-0 active:shadow-none";
                 }
 
                 return (
@@ -255,7 +247,7 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
                     className={btnClass}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{option}</span>
+                      <span className="mr-2">{option}</span>
                       {(selectedOption !== null) && idx === currentQuestion.correctAnswerIndex && (
                         <CheckCircle className="w-5 h-5 text-emerald-400" />
                       )}
@@ -268,19 +260,22 @@ const LogicGame: React.FC<LogicGameProps> = ({ difficulty, onEndGame, onBack, is
               })}
             </div>
 
+            {/* Feedback / Explanation Box */}
             {showExplanation && (
-              <div className="animate-fade-in mb-2">
-                <div className={`p-3 rounded-lg border text-xs md:text-sm ${
-                  selectedOption === currentQuestion.correctAnswerIndex ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-100' : 'bg-red-900/20 border-red-500/30 text-red-100'
+              <div className="mt-4 animate-fade-in">
+                <div className={`p-4 border-2 font-mono text-sm shadow-[4px_4px_0_0_rgba(0,0,0,0.5)] ${
+                  selectedOption === currentQuestion.correctAnswerIndex ? 'bg-emerald-950 border-emerald-500 text-emerald-200' : 'bg-red-950 border-red-500 text-red-200'
                 }`}>
-                   <span className="font-bold mr-2">{selectedOption === currentQuestion.correctAnswerIndex ? 'BENAR!' : 'SALAH!'}</span>
-                   {currentQuestion.explanation}
+                   <div className="flex items-start gap-2">
+                       <span className="font-bold font-pixel text-xs mt-0.5">{selectedOption === currentQuestion.correctAnswerIndex ? '[CORRECT]' : '[ERROR]'}</span>
+                       <span>{currentQuestion.explanation}</span>
+                   </div>
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         ) : (
-          <div className="text-center text-red-400">Gagal memuat pertanyaan.</div>
+          <div className="text-center text-red-400 font-pixel mt-10">Error loading data.</div>
         )}
       </div>
     </div>

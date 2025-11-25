@@ -1,3 +1,4 @@
+
 export enum GameMode {
   WELCOME = 'WELCOME',
   MENU = 'MENU',
@@ -12,6 +13,7 @@ export enum GameMode {
   VISUAL_SEARCH = 'VISUAL_SEARCH', // Selective Attention (New)
   NAVIGATION = 'NAVIGATION', // Spatial Orientation (New)
   TASK_SWITCH = 'TASK_SWITCH', // Cognitive Flexibility (Newest)
+  PATHFINDING = 'PATHFINDING', // Spatial Planning (Newest)
   RESULT = 'RESULT'
 }
 
@@ -20,6 +22,10 @@ export enum Difficulty {
   INTERMEDIATE = 'Menengah',
   ADVANCED = 'Mahir'
 }
+
+export type Language = 'ID' | 'EN';
+
+export type FontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
 
 export interface User {
   id: string;

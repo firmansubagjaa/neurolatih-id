@@ -47,7 +47,7 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
 
   useEffect(() => {
     isMountedRef.current = true;
-    startMusic('FOCUS'); // Intense music
+    startMusic('SWITCH'); // Glitch/Tech music
     generateNext();
     return () => {
       isMountedRef.current = false;
@@ -72,12 +72,10 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
     setFeedback(null);
 
     // Determine Rule
-    // Difficulty Logic:
-    // Beginner: Rule stays same for longer runs
-    // Advanced: Rule flips almost every turn
     const flipChance = difficulty === Difficulty.BEGINNER ? 0.2 : difficulty === Difficulty.INTERMEDIATE ? 0.5 : 0.8;
     
     if (Math.random() < flipChance) {
+        playSound('switch'); // Audio feedback for rule switch
         setCurrentRule(prev => prev === 'VOWEL' ? 'EVEN' : 'VOWEL');
     }
   };
@@ -186,40 +184,41 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
           "Perhatikan PERINTAH di atas kartu.",
           "Jika perintahnya 'HURUF VOKAL?', jawab YA jika hurufnya A/I/U/E/O.",
           "Jika perintahnya 'ANGKA GENAP?', jawab YA jika angkanya 2/4/6/8.",
+          ...(isQuickMode ? ["MODE CEPAT: Aturan berubah lebih sering!"] : []), // Fixed bug
           "Waspada! Perintah berubah tiba-tiba."
         ]}
         icon={<Shuffle className="w-6 h-6" />}
       />
       <QuitModal isOpen={showQuitModal} onConfirm={() => { setShowQuitModal(false); onBack(); }} onCancel={() => setShowQuitModal(false)} />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleBackRequest} className="!px-2">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
+            <Button variant="ghost" onClick={handleBackRequest} className="!px-3 text-sm">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
             <Tooltip text="ATURAN MAIN">
-                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400"><HelpCircle className="w-5 h-5" /></Button>
+                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-3 text-neuro-400"><HelpCircle className="w-5 h-5" /></Button>
             </Tooltip>
          </div>
          <Badge color="bg-retro-cyan">Score: {score}</Badge>
       </div>
 
-      <Card className="flex flex-col items-center min-h-[400px]">
+      <Card className="flex flex-col items-center min-h-[450px] p-6 md:p-8">
          <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
          
          {/* RULE INDICATOR */}
-         <div className={`w-full py-4 mb-6 rounded-lg border-2 flex items-center justify-center gap-3 transition-colors duration-300 ${
+         <div className={`w-full py-5 mb-8 rounded-lg border-2 flex items-center justify-center gap-3 transition-colors duration-300 ${
              currentRule === 'VOWEL' 
              ? 'bg-blue-900/40 border-blue-400 text-blue-300' 
              : 'bg-orange-900/40 border-orange-400 text-orange-300'
          }`}>
-             {currentRule === 'VOWEL' ? <Type className="w-6 h-6" /> : <Hash className="w-6 h-6" />}
-             <span className="font-pixel text-sm md:text-lg animate-pulse">
+             {currentRule === 'VOWEL' ? <Type className="w-8 h-8" /> : <Hash className="w-8 h-8" />}
+             <span className="font-pixel text-base md:text-xl animate-pulse">
                  {currentRule === 'VOWEL' ? 'HURUF VOKAL?' : 'ANGKA GENAP?'}
              </span>
          </div>
 
          {/* STIMULUS CARD */}
-         <div className="relative w-48 h-48 md:w-56 md:h-56 bg-slate-800 rounded-2xl border-4 border-slate-600 flex items-center justify-center mb-8 shadow-2xl">
-             <div className="text-6xl md:text-7xl font-black text-white font-mono tracking-widest flex gap-4">
+         <div className="relative w-56 h-56 md:w-64 md:h-64 bg-slate-800 rounded-2xl border-4 border-slate-600 flex items-center justify-center mb-10 shadow-2xl">
+             <div className="text-7xl md:text-8xl font-black text-white font-mono tracking-widest flex gap-4">
                  <span className={currentRule === 'VOWEL' ? 'text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]' : 'text-slate-500'}>{char}</span>
                  <span className={currentRule === 'EVEN' ? 'text-orange-400 drop-shadow-[0_0_10px_rgba(251,146,60,0.8)]' : 'text-slate-500'}>{num}</span>
              </div>
@@ -227,8 +226,8 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
              {feedback && (
                 <div className={`absolute inset-0 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm animate-fade-in z-10`}>
                     {feedback === 'CORRECT' 
-                        ? <Check className="w-24 h-24 text-emerald-500 drop-shadow-lg" />
-                        : <X className="w-24 h-24 text-red-500 drop-shadow-lg" />
+                        ? <Check className="w-32 h-32 text-emerald-500 drop-shadow-lg" />
+                        : <X className="w-32 h-32 text-red-500 drop-shadow-lg" />
                     }
                 </div>
              )}
@@ -238,21 +237,21 @@ const TaskSwitchGame: React.FC<TaskSwitchGameProps> = ({ difficulty, onEndGame, 
          <div className="grid grid-cols-2 gap-4 w-full mt-auto">
             <Button 
                 variant="danger" 
-                className="h-16 text-lg border-red-500/50 bg-red-900/20 hover:bg-red-900/40 text-red-100"
+                className="h-20 text-xl border-red-500/50 bg-red-900/20 hover:bg-red-900/40 text-red-100"
                 onClick={() => handleAnswer(false)}
             >
-                <X className="w-5 h-5 mr-2" /> TIDAK
+                <X className="w-6 h-6 mr-3" /> TIDAK
             </Button>
             <Button 
                 variant="primary" 
-                className="h-16 text-lg border-emerald-500/50 bg-emerald-900/20 hover:bg-emerald-900/40 text-emerald-100"
+                className="h-20 text-xl border-emerald-500/50 bg-emerald-900/20 hover:bg-emerald-900/40 text-emerald-100"
                 onClick={() => handleAnswer(true)}
             >
-                <Check className="w-5 h-5 mr-2" /> YA
+                <Check className="w-6 h-6 mr-3" /> YA
             </Button>
          </div>
          
-         <p className="text-xs text-slate-500 mt-4 text-center">
+         <p className="text-sm text-slate-500 mt-6 text-center">
              Jawab sesuai aturan yang sedang aktif di atas.
          </p>
       </Card>

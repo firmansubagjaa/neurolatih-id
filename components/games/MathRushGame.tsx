@@ -146,7 +146,7 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto relative">
+    <div className="w-full max-w-xl mx-auto relative">
       {!introFinished && (
         <GameIntro 
           gameMode={GameMode.MATH_RUSH} 
@@ -165,36 +165,37 @@ const MathRushGame: React.FC<MathRushGameProps> = ({ difficulty, onEndGame, onBa
         content={[
           "Hitung secepat kilat.",
           "Waktu sangat terbatas.",
+          ...(isQuickMode ? ["MODE CEPAT: Waktu menipis 2x lebih cepat!"] : []), // Fixed bug
           "Jangan panik, fokus pada angka.",
         ]}
         icon={<Calculator className="w-6 h-6" />}
       />
       <QuitModal isOpen={showQuitModal} onConfirm={() => { setShowQuitModal(false); onBack(); }} onCancel={() => setShowQuitModal(false)} />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleBackRequest} className="!px-2">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
+            <Button variant="ghost" onClick={handleBackRequest} className="!px-3 text-sm">&larr; {isPracticeMode ? "Selesai" : "Keluar"}</Button>
             <Tooltip text="ATURAN MAIN">
-                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-2 text-neuro-400"><HelpCircle className="w-5 h-5" /></Button>
+                <Button variant="ghost" onClick={() => setShowTutorial(true)} className="!px-3 text-neuro-400"><HelpCircle className="w-5 h-5" /></Button>
             </Tooltip>
          </div>
          <Badge color="bg-retro-cyan">Score: {score}</Badge>
       </div>
 
-      <Card className="flex flex-col items-center">
+      <Card className="flex flex-col items-center p-6 md:p-8">
          <CountdownBar totalTime={TOTAL_TIME} timeLeft={timeLeft} isPracticeMode={isPracticeMode} />
          
-         <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[150px] mb-6 bg-slate-800 rounded-xl border-4 border-slate-600 relative overflow-hidden">
+         <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[180px] mb-8 bg-slate-800 rounded-xl border-4 border-slate-600 relative overflow-hidden">
             <div className="text-6xl md:text-8xl font-black text-white font-mono tracking-widest">{problem.text}</div>
-            <div className="text-sm text-slate-500 mt-2 font-pixel">CALCULATE_NOW</div>
+            <div className="text-base text-slate-500 mt-4 font-pixel">CALCULATE_NOW</div>
          </div>
 
-         <div className="grid grid-cols-2 gap-4 w-full">
+         <div className="grid grid-cols-2 gap-4 md:gap-6 w-full">
             {options.map((opt, idx) => (
                 <button
                     key={idx}
                     onClick={() => handleAnswer(opt)}
-                    className="py-6 rounded-xl bg-slate-800 border-b-4 border-slate-900 active:border-b-0 active:translate-y-1 hover:bg-slate-700 text-3xl font-mono font-bold text-retro-cyan transition-colors"
+                    className="py-6 md:py-8 rounded-xl bg-slate-800 border-b-4 border-slate-900 active:border-b-0 active:translate-y-1 hover:bg-slate-700 text-3xl md:text-5xl font-mono font-bold text-retro-cyan transition-colors"
                 >
                     {opt}
                 </button>

@@ -2,10 +2,13 @@
 let audioCtx: AudioContext | null = null;
 let sfxVolume = 0.5;
 let musicVolume = 0.3;
+let isMuted = false;
+let previousMusicVol = 0.3;
+
 let musicNodes: AudioNode[] = [];
 let nextNoteTime = 0;
 let timerID: number | null = null;
-let currentMood: 'MENU' | 'FOCUS' | 'MEMORY' | 'PLAYFUL' = 'MENU';
+let currentMood: 'MENU' | 'FOCUS' | 'MEMORY' | 'PLAYFUL' | 'SWITCH' = 'MENU';
 let isPlaying = false;
 
 // Initialize Audio Context lazily
@@ -19,14 +22,14 @@ export const initAudio = () => {
   return audioCtx;
 };
 
-// Explicitly resume audio context (Browser Autoplay Policy)
+// Explicitly resume audio context
 export const resumeAudio = async () => {
   const ctx = initAudio();
   if (ctx && ctx.state === 'suspended') {
     try {
       await ctx.resume();
     } catch (e) {
-      console.error("Gagal mengaktifkan audio:", e);
+      console.error("Audio resume failed:", e);
     }
   }
   return ctx;
@@ -38,86 +41,103 @@ export const setSfxVolume = (vol: number) => {
 
 export const setMusicVolume = (vol: number) => {
   musicVolume = Math.max(0, Math.min(1, vol));
+  if (musicVolume > 0) isMuted = false;
 };
 
+export const toggleMute = () => {
+  if (isMuted) {
+    musicVolume = previousMusicVol > 0 ? previousMusicVol : 0.3;
+    isMuted = false;
+  } else {
+    previousMusicVol = musicVolume;
+    musicVolume = 0;
+    isMuted = true;
+  }
+  return isMuted;
+};
+
+export const getIsMuted = () => isMuted;
 export const getSfxVolume = () => sfxVolume;
 export const getMusicVolume = () => musicVolume;
 
-// --- 8-BIT RETRO MUSIC ENGINE (ARCADE STYLE) ---
+// --- 8-BIT SYNTH ENGINE ---
 
-// Frequencies
-const N = {
-  // Octave 2
-  E2: 82.41, F2: 87.31, G2: 98.00, A2: 110.00, Ash2: 116.54, B2: 123.47,
-  
-  // Octave 3
-  C3: 130.81, D3: 146.83, Dsh3: 155.56, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, Ash3: 233.08, B3: 246.94,
-  
-  // Octave 4
-  C4: 261.63, Csh4: 277.18, D4: 293.66, Dsh4: 311.13, E4: 329.63, F4: 349.23, Fsh4: 369.99, G4: 392.00, Gsh4: 415.30, A4: 440.00, Ash4: 466.16, B4: 493.88,
-  
-  // Octave 5
-  C5: 523.25, D5: 587.33, Dsh5: 622.25, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77,
-  
-  // Octave 6
-  C6: 1046.50, E6: 1318.51,
-  
-  X: 0 // Rest/Silence
+// Noise buffer for percussion/explosions (NES Noise Channel simulation)
+let noiseBuffer: AudioBuffer | null = null;
+const createNoiseBuffer = (ctx: AudioContext) => {
+  if (noiseBuffer) return noiseBuffer;
+  const bufferSize = ctx.sampleRate * 2; // 2 seconds
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  noiseBuffer = buffer;
+  return buffer;
 };
 
-// Envelope helper for punchy 8-bit sounds
-const playOscillator = (freq: number, startTime: number, duration: number, type: OscillatorType, volMultiplier: number) => {
+const playOscillator = (freq: number, startTime: number, duration: number, type: OscillatorType, volMultiplier: number, slideTo?: number) => {
   if (!audioCtx || musicVolume <= 0 || freq <= 0) return;
 
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
   osc.type = type;
-  osc.frequency.value = freq;
+  osc.frequency.setValueAtTime(freq, startTime);
+  if (slideTo) {
+      osc.frequency.exponentialRampToValueAtTime(slideTo, startTime + duration);
+  }
 
-  // Staccato envelope (Short, punchy)
-  // Attack: very fast, Decay: slight, Sustain: held, Release: fast
-  const attack = 0.01;
+  // ADSR Envelope
+  const attack = 0.02;
+  const decay = 0.1;
+  const sustain = 0.3;
   const release = 0.05;
-  const hold = duration - attack - release;
+  
+  // Calculate total time but respect duration
+  const effectiveDuration = Math.max(duration, attack + decay + release);
 
   gain.gain.setValueAtTime(0, startTime);
   gain.gain.linearRampToValueAtTime(musicVolume * volMultiplier, startTime + attack);
-  gain.gain.setValueAtTime(musicVolume * volMultiplier, startTime + attack + hold);
-  gain.gain.linearRampToValueAtTime(0, startTime + duration);
+  gain.gain.linearRampToValueAtTime(musicVolume * volMultiplier * sustain, startTime + attack + decay);
+  gain.gain.setValueAtTime(musicVolume * volMultiplier * sustain, startTime + effectiveDuration - release);
+  gain.gain.linearRampToValueAtTime(0, startTime + effectiveDuration);
 
   osc.connect(gain);
   gain.connect(audioCtx.destination);
 
   osc.start(startTime);
-  osc.stop(startTime + duration);
+  osc.stop(startTime + effectiveDuration);
 
   musicNodes.push(osc);
   musicNodes.push(gain);
 
-  // Garbage collection
   setTimeout(() => {
     try { osc.disconnect(); gain.disconnect(); } catch (e) {}
     const idx = musicNodes.indexOf(osc);
     if (idx > -1) musicNodes.splice(idx, 1);
-  }, (duration + 1) * 1000);
+  }, (effectiveDuration + 1) * 1000);
 };
 
 // --- MUSIC PATTERNS ---
+// Using frequencies (Hz) directly for 8-bit scale
+const N = {
+  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+  C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, C6: 1046.50,
+  X: 0
+};
+
 let step = 0;
-// Higher BPM for energetic feel (approx 150-160 BPM)
-const SIXTEENTH_NOTE_TIME = 0.10; 
+const SIXTEENTH_NOTE_TIME = 0.12; // Slightly slower than before for groovier feel
 
 const scheduler = () => {
   if (!audioCtx) return;
-
-  // Schedule ahead
   while (nextNoteTime < audioCtx.currentTime + 0.15) {
     scheduleStep(step, nextNoteTime);
     step++;
     nextNoteTime += SIXTEENTH_NOTE_TIME;
   }
-  
   if (isPlaying) {
     timerID = window.setTimeout(scheduler, 50);
   }
@@ -125,76 +145,68 @@ const scheduler = () => {
 
 const scheduleStep = (currentStep: number, time: number) => {
   const beat16 = currentStep % 16; 
-  
   let bassFreq = 0;
   let melodyFreq = 0;
 
   switch (currentMood) {
     case 'MENU': 
-      // Funky Arcade Title (Syncopated Bass)
-      // Bass: C - G - Bb - F Pattern
-      const menuBass = [N.C3, N.X, N.C3, N.G2,  N.Ash2, N.Ash2, N.F2, N.G2,  N.C3, N.X, N.C3, N.G2, N.F2, N.F2, N.Ash2, N.B2];
-      bassFreq = menuBass[beat16] || 0;
+      // Arpeggiated Triangle Wave (Classic Title Screen)
+      const menuArp = [N.C3, N.G3, N.C4, N.E4, N.G4, N.E4, N.C4, N.G3];
+      bassFreq = menuArp[beat16 % 8];
       
-      // Melody: Catchy Arpeggio
+      // Simple Pulse Melody
       if (beat16 === 0) melodyFreq = N.C5;
-      if (beat16 === 2) melodyFreq = N.G4;
-      if (beat16 === 4) melodyFreq = N.Ash4;
-      if (beat16 === 6) melodyFreq = N.C5;
-      if (beat16 === 12) melodyFreq = N.E5;
-      if (beat16 === 14) melodyFreq = N.C5;
+      if (beat16 === 4) melodyFreq = N.G4;
+      if (beat16 === 12) melodyFreq = N.C5;
       
-      playOscillator(bassFreq, time, 0.08, 'square', 0.4); 
-      if (melodyFreq) playOscillator(melodyFreq, time, 0.06, 'square', 0.2); 
+      playOscillator(bassFreq, time, 0.1, 'triangle', 0.6); 
+      if (melodyFreq) playOscillator(melodyFreq, time, 0.2, 'square', 0.3); 
       break;
 
     case 'FOCUS':
-      // "Hurry Up" style (Logic, Math, Task Switch)
-      // Fast walking bass (sawtooth for intensity)
-      const focusBass = [N.A2, N.E3, N.A2, N.E3, N.G2, N.D3, N.G2, N.D3,  N.F2, N.C3, N.F2, N.C3, N.E2, N.B2, N.E2, N.B2];
-      bassFreq = focusBass[beat16] || 0;
-
-      // Urgent high melody
-      if (beat16 % 2 === 0) melodyFreq = N.A4; 
-      if (beat16 % 4 === 2) melodyFreq = N.C5;
-      if (beat16 % 8 === 6) melodyFreq = N.E5;
-
-      playOscillator(bassFreq, time, 0.09, 'sawtooth', 0.35);
-      if (melodyFreq) playOscillator(melodyFreq, time, 0.05, 'square', 0.15);
+      // Urgent Sawtooth Bass
+      if (beat16 % 2 === 0) bassFreq = N.A3;
+      else bassFreq = N.A3 / 2;
+      
+      if (beat16 % 4 === 0) melodyFreq = N.C5;
+      if (beat16 % 4 === 2) melodyFreq = N.A4;
+      
+      playOscillator(bassFreq, time, 0.1, 'sawtooth', 0.4);
+      if (melodyFreq) playOscillator(melodyFreq, time, 0.1, 'square', 0.3);
       break;
 
     case 'PLAYFUL':
-      // "Overworld" style (Word, Color, Anagram)
-      // Major scale, bouncy
-      // Bass: 1-5-1-5 pattern
-      if (beat16 % 4 === 0) bassFreq = N.C3;
-      if (beat16 % 4 === 2) bassFreq = N.G2;
+      // Bouncy Square Wave
+      bassFreq = (beat16 % 4 === 0) ? N.C3 : (beat16 % 4 === 2 ? N.G3 : 0);
       
-      // Melody: Happy run
-      const playfulMelody = [N.C5, N.G4, N.E4, N.C4,  N.G4, N.C5, N.E5, N.G5,  N.C6, N.X, N.G5, N.X,  N.E5, N.C5, N.G4, N.E4];
-      melodyFreq = playfulMelody[beat16] || 0;
-      
-      playOscillator(bassFreq, time, 0.08, 'triangle', 0.5);
-      if (melodyFreq) playOscillator(melodyFreq, time, 0.07, 'square', 0.25);
+      const playMelody = [N.E4, N.G4, N.C5, N.X, N.G4, N.C5, N.E5, N.X];
+      melodyFreq = playMelody[beat16 % 8];
+
+      if (bassFreq) playOscillator(bassFreq, time, 0.1, 'square', 0.5);
+      if (melodyFreq) playOscillator(melodyFreq, time, 0.1, 'sine', 0.4);
       break;
 
     case 'MEMORY':
-      // Rhythmic & Mysterious (N-Back, Memory)
-      // Bass: Driving 8th notes
-      if (beat16 % 2 === 0) bassFreq = N.D3;
-      if (beat16 % 8 === 6) bassFreq = N.A2;
+      // Mystical Sine Waves
+      if (beat16 % 8 === 0) bassFreq = N.D3;
+      if (beat16 % 8 === 4) bassFreq = N.A3;
       
-      // Melody: Question and Answer
-      const memoryMelody = [N.D5, N.X, N.A4, N.X,  N.D5, N.X, N.X, N.X,  N.F5, N.X, N.D5, N.X,  N.A5, N.X, N.F5, N.X];
-      melodyFreq = memoryMelody[beat16] || 0;
-
-      playOscillator(bassFreq, time, 0.05, 'triangle', 0.4);
-      if (melodyFreq) playOscillator(melodyFreq, time, 0.08, 'sine', 0.3);
+      if (Math.random() > 0.7) melodyFreq = [N.D5, N.F5, N.A5][Math.floor(Math.random()*3)];
+      
+      if (bassFreq) playOscillator(bassFreq, time, 0.4, 'sine', 0.6);
+      if (melodyFreq) playOscillator(melodyFreq, time, 0.2, 'triangle', 0.3);
       break;
+      
+    case 'SWITCH':
+        // Chaotic
+        bassFreq = N.C3;
+        if (beat16 % 2 !== 0) bassFreq = N.F3;
+        playOscillator(bassFreq, time, 0.05, 'sawtooth', 0.4);
+        break;
   }
 };
 
-export const startMusic = async (mood: 'MENU' | 'FOCUS' | 'MEMORY' | 'PLAYFUL') => {
+export const startMusic = async (mood: typeof currentMood) => {
   const ctx = await resumeAudio(); 
   if (!ctx) return;
   
@@ -215,31 +227,29 @@ export const stopMusic = () => {
     clearTimeout(timerID);
     timerID = null;
   }
-  musicNodes.forEach(node => {
-    try { node.disconnect(); } catch (e) {}
-  });
-  musicNodes = [];
 };
 
-export const playSound = async (type: 'click' | 'correct' | 'wrong' | 'pop' | 'win') => {
-  if (sfxVolume <= 0) return;
-  
-  const ctx = initAudio();
-  if (ctx && ctx.state === 'suspended') ctx.resume();
-  
-  if (!ctx) return;
-  const now = ctx.currentTime;
+// --- SFX ENGINE ---
 
+export const playSound = async (type: 'click' | 'correct' | 'wrong' | 'pop' | 'win' | 'switch') => {
+  if (sfxVolume <= 0) return;
+  const ctx = initAudio();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  
+  const now = ctx.currentTime;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
+  
   osc.connect(gain);
   gain.connect(ctx.destination);
 
   switch (type) {
     case 'click':
+      // Short high blip
       osc.type = 'square';
-      osc.frequency.setValueAtTime(600, now);
-      osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(1000, now + 0.05);
       gain.gain.setValueAtTime(0.1 * sfxVolume, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.05);
       osc.start(now);
@@ -247,54 +257,87 @@ export const playSound = async (type: 'click' | 'correct' | 'wrong' | 'pop' | 'w
       break;
 
     case 'correct':
-      // Classic 1-Up / Coin sound
+      // Coin sound (Two distinct notes)
       osc.type = 'square';
-      osc.frequency.setValueAtTime(987.77, now); // B5
-      osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
-      gain.gain.setValueAtTime(0.15 * sfxVolume, now);
-      gain.gain.setValueAtTime(0.15 * sfxVolume, now + 0.08);
-      gain.gain.linearRampToValueAtTime(0, now + 0.4);
+      // Note 1: B5
+      osc.frequency.setValueAtTime(987, now);
+      gain.gain.setValueAtTime(0.1 * sfxVolume, now);
+      gain.gain.setValueAtTime(0.1 * sfxVolume, now + 0.08);
+      
+      // Note 2: E6 (Higher)
+      setTimeout(() => {
+          if(ctx.state === 'closed') return;
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.type = 'square';
+          osc2.frequency.setValueAtTime(1318, ctx.currentTime);
+          gain2.gain.setValueAtTime(0.1 * sfxVolume, ctx.currentTime);
+          gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.start();
+          osc2.stop(ctx.currentTime + 0.4);
+      }, 80);
+      
       osc.start(now);
-      osc.stop(now + 0.4);
+      osc.stop(now + 0.08);
       break;
 
     case 'wrong':
-      // Retro damage noise
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.linearRampToValueAtTime(50, now + 0.3);
-      gain.gain.setValueAtTime(0.25 * sfxVolume, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.3);
-      osc.start(now);
-      osc.stop(now + 0.3);
+      // Noise burst for error
+      const noise = createNoiseBuffer(ctx);
+      const source = ctx.createBufferSource();
+      source.buffer = noise;
+      const noiseGain = ctx.createGain();
+      source.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      
+      noiseGain.gain.setValueAtTime(0.3 * sfxVolume, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      
+      source.start(now);
+      source.stop(now + 0.3);
       break;
 
-    case 'win':
-      // Level clear fanfare
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(523.25, now); // C5
-      osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
-      osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
-      osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
-      osc.frequency.setValueAtTime(1318.51, now + 0.4); // E6
-      gain.gain.setValueAtTime(0.2 * sfxVolume, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.8);
-      osc.start(now);
-      osc.stop(now + 0.8);
-      break;
-      
     case 'pop':
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(400, now);
-      osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+      // Bubble sound
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.linearRampToValueAtTime(600, now + 0.1);
       gain.gain.setValueAtTime(0.2 * sfxVolume, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.1);
       osc.start(now);
       osc.stop(now + 0.1);
       break;
+
+    case 'win':
+      // Level clear fanfare (Arpeggio)
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+      notes.forEach((freq, i) => {
+          const oscW = ctx.createOscillator();
+          const gainW = ctx.createGain();
+          oscW.type = 'square';
+          oscW.frequency.value = freq;
+          oscW.connect(gainW);
+          gainW.connect(ctx.destination);
+          
+          const t = now + i * 0.1;
+          gainW.gain.setValueAtTime(0.1 * sfxVolume, t);
+          gainW.gain.linearRampToValueAtTime(0, t + 0.4); // Decay
+          
+          oscW.start(t);
+          oscW.stop(t + 0.4);
+      });
+      break;
+
+    case 'switch':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+      gain.gain.setValueAtTime(0.1 * sfxVolume, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+      break;
   }
-  
-  setTimeout(() => {
-      try { osc.disconnect(); gain.disconnect(); } catch(e) {}
-  }, 1000);
 };
