@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Button } from './Shared';
+import { Button } from './ui/Button';
 import { X, Play } from 'lucide-react';
 
 interface TutorialOverlayProps {
@@ -21,24 +22,16 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClos
               {icon && <div className="p-1.5 bg-retro-cyan/20 rounded text-retro-cyan">{icon}</div>}
               <h2 className="text-lg font-bold text-white font-pixel leading-tight">{title}</h2>
            </div>
-           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-             <X className="w-5 h-5" />
-           </button>
+           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
         </div>
-        
         <div className="space-y-3 mb-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
            {content.map((step, idx) => (
              <div key={idx} className="flex gap-3">
-                <div className="flex-shrink-0 w-5 h-5 rounded bg-slate-800 flex items-center justify-center text-xs font-bold text-retro-cyan border border-slate-700 font-pixel">
-                  {idx + 1}
-                </div>
-                <div className="text-slate-300 text-sm leading-snug w-full">
-                  {step}
-                </div>
+                <div className="flex-shrink-0 w-6 h-6 rounded bg-slate-800 flex items-center justify-center text-xs font-bold text-retro-cyan border border-slate-700 font-pixel">{idx + 1}</div>
+                <div className="text-slate-300 text-sm leading-snug w-full pt-1">{step}</div>
              </div>
            ))}
         </div>
-
         <Button onClick={onClose} variant="secondary" className="w-full py-3 bg-retro-cyan text-black hover:bg-white hover:text-black font-bold">
           <Play className="w-4 h-4 mr-2 text-black" /> <span className="font-pixel text-black">MULAI MISI</span>
         </Button>

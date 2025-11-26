@@ -2,6 +2,7 @@
 export enum GameMode {
   WELCOME = 'WELCOME',
   MENU = 'MENU',
+  ABOUT = 'ABOUT', // Scientific Database Screen
   MEMORY = 'MEMORY', // Pattern Recall
   SEQUENCE = 'SEQUENCE', // Logic/Sequences
   PROBLEM = 'PROBLEM', // Riddles/Scenarios
@@ -14,8 +15,7 @@ export enum GameMode {
   NAVIGATION = 'NAVIGATION', // Spatial Orientation (New)
   TASK_SWITCH = 'TASK_SWITCH', // Cognitive Flexibility (Newest)
   PATHFINDING = 'PATHFINDING', // Spatial Planning (Newest)
-  RESULT = 'RESULT',
-  ABOUT = 'ABOUT'
+  RESULT = 'RESULT'
 }
 
 export enum Difficulty {
@@ -26,13 +26,19 @@ export enum Difficulty {
 
 export type Language = 'ID' | 'EN';
 
+export type Theme = 'DARK' | 'LIGHT';
+
 export type FontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
+
+export type AchievementTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 
 export interface Achievement {
   id: string;
   title: string;
   description: string;
   icon: string; // Emoji or Lucide icon name
+  tier: AchievementTier;
+  isSecret?: boolean;
   unlockedAt?: number; // Timestamp
 }
 

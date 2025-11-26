@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, Suspense, useMemo, useCallback } from 'react';
-import { GameMode, Difficulty, GameResult, UserProfile, FontSize, Language } from './types';
+import { GameMode, Difficulty, GameResult, UserProfile, FontSize, Language, Theme } from './types';
 import { NeuralLoader, Tooltip } from './components/Shared';
 import { SettingsModal } from './components/SettingsModal';
 import { DifficultyModal } from './components/DifficultyModal';
@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>(GameMode.WELCOME);
   const [language, setLanguage] = useState<Language>('ID');
+  const [theme, setTheme] = useState<Theme>('DARK');
   const [isMuted, setIsMuted] = useState(false);
   
   // Game Config State
@@ -68,16 +69,35 @@ const App: React.FC = () => {
   // --- INITIALIZATION ---
   useEffect(() => {
     setIsMuted(getIsMuted());
+    
+    // Load Language
     const savedLang = localStorage.getItem('neuro_lang') as Language;
     if (savedLang) setLanguage(savedLang);
+    
+    // Load Theme
+    const savedTheme = localStorage.getItem('neuro_theme') as Theme;
+    if (savedTheme) setTheme(savedTheme);
+
+    // Load Font Size
     const savedFont = localStorage.getItem('neuro_font_size') as FontSize;
     if (savedFont) {
         const sizeMap: Record<FontSize, string> = { 'SMALL': '14px', 'MEDIUM': '16px', 'LARGE': '20px' };
         document.documentElement.style.fontSize = sizeMap[savedFont];
     }
+    
     const existingProfile = getUserProfile();
     if (existingProfile) setProfile(existingProfile);
   }, []);
+
+  // Apply Theme Class
+  useEffect(() => {
+    if (theme === 'LIGHT') {
+        document.body.classList.add('light-mode');
+    } else {
+        document.body.classList.remove('light-mode');
+    }
+    localStorage.setItem('neuro_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     if (gameMode === GameMode.WELCOME || gameMode === GameMode.MENU || gameMode === GameMode.RESULT || gameMode === GameMode.ABOUT) {
@@ -193,6 +213,8 @@ const App: React.FC = () => {
             setIsQuickMode={setIsQuickMode}
             isPracticeMode={isPracticeMode}
             setIsPracticeMode={setIsPracticeMode}
+            theme={theme}
+            setTheme={setTheme}
           />
         );
       case GameMode.RESULT:
@@ -236,7 +258,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-retro-bg text-retro-green font-sans selection:bg-retro-green selection:text-black overflow-x-hidden relative flex flex-col">
+    <div className="min-h-screen bg-retro-bg text-retro-green font-sans selection:bg-retro-green selection:text-black overflow-x-hidden relative flex flex-col transition-colors duration-300">
       <NeuralBackground />
       
       {/* Global Floating Controls */}
@@ -271,6 +293,8 @@ const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)} 
         language={language}
         setLanguage={(l) => { setLanguage(l); localStorage.setItem('neuro_lang', l); }}
+        theme={theme}
+        setTheme={setTheme}
         t={t}
       />
       <GameInfoModal

@@ -1,21 +1,22 @@
+
 <!DOCTYPE html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
-        <!-- PWA Manifest & Icons -->
+    <!-- PWA Manifest & Icons -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="NeuroLatih">
-
-    <!-- Dynamic Retro Favicon (Green Alien Pixel Art) -->
+    
+    <!-- Dynamic Retro Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='%2333ff00'%3E%3Cpath d='M2 2h2v1H2zm6 0h2v1H8zM2 3h8v1H2zM1 4h2v1H1zm8 0h2v1H9zM1 5h10v2H1zM2 7h2v1H2zm6 0h2v1H8zM3 8h2v1H3zm4 0h2v1H7zM0 4h1v5H0zm11 0h1v5h-1z'/%3E%3C/svg%3E" />
-
-    <title>NeuroLatih 8-BIT | Game Asah Otak, Logika & Memori Indonesia</title>
-    <meta name="theme-color" content="#050505" />
+    
+    <title>NeuroLatih 8-BIT | Neural Enhancement Suite</title>
+    <meta name="theme-color" content="#050510" />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,16 +31,24 @@
               pixel: ['"Press Start 2P"', 'cursive'],
             },
             colors: {
+              black: 'var(--color-black)',
+              white: 'var(--color-white)',
+              slate: {
+                950: 'var(--color-slate-950)',
+                900: 'var(--color-slate-900)', 
+                800: 'var(--color-slate-800)',
+                700: 'var(--color-slate-700)',
+                600: 'var(--color-slate-600)',
+                500: 'var(--color-slate-500)',
+              },
               retro: {
-                bg: '#050510',
-                surface: '#1a1a2e',
-                green: '#4ade80', // Brighter neon green
-                greenDim: '#14532d',
-                pink: '#f472b6',
-                yellow: '#facc15',
-                cyan: '#22d3ee',
-                red: '#f87171',
-                purple: '#c084fc',
+                bg: 'var(--retro-bg)',
+                green: 'var(--color-retro-green)',
+                pink: 'var(--color-retro-pink)',
+                yellow: 'var(--color-retro-yellow)',
+                cyan: 'var(--color-retro-cyan)',
+                red: 'var(--color-retro-red)',
+                purple: 'var(--color-retro-purple)',
               },
             },
             animation: {
@@ -48,16 +57,12 @@
               'glitch': 'glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite',
               'float': 'float 3s ease-in-out infinite',
               'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+              'scale-in': 'scaleIn 0.2s ease-out forwards',
             },
             keyframes: {
-              blink: {
-                '0%, 100%': { opacity: '1' },
-                '50%': { opacity: '0' },
-              },
-              scanline: {
-                '0%': { backgroundPosition: '0 0' },
-                '100%': { backgroundPosition: '0 100%' },
-              },
+              blink: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0' } },
+              scanline: { '0%': { backgroundPosition: '0 0' }, '100%': { backgroundPosition: '0 100%' } },
               glitch: {
                 '0%': { transform: 'translate(0)' },
                 '20%': { transform: 'translate(-2px, 2px)' },
@@ -66,132 +71,135 @@
                 '80%': { transform: 'translate(2px, -2px)' },
                 '100%': { transform: 'translate(0)' },
               },
-              float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-5px)' },
-              }
+              float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } },
+              shake: {
+                '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+              },
+              scaleIn: { '0%': { transform: 'scale(0.8)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } }
             },
             boxShadow: {
-              'retro': '4px 4px 0px 0px rgba(0,0,0,1)',
-              'retro-sm': '2px 2px 0px 0px rgba(0,0,0,1)',
-              'retro-lg': '8px 8px 0px 0px rgba(0,0,0,0.5)',
-              'glow': '0 0 10px rgba(51, 255, 0, 0.5)',
+              'retro': '4px 4px 0px 0px var(--color-shadow)',
+              'retro-sm': '2px 2px 0px 0px var(--color-shadow)',
+              'retro-lg': '8px 8px 0px 0px var(--color-shadow-lg)',
+              'glow': '0 0 15px var(--color-retro-green)',
             }
           },
         },
       }
     </script>
     <style>
-      body {
-        background-color: #050510;
-        color: #e2e8f0;
-        font-family: "VT323", monospace;
-        overflow-x: hidden;
+      :root {
+        --color-black: #050505;
+        --color-white: #e2e8f0;
+        --retro-bg: #050510;
+        
+        /* High Contrast Neon Palette */
+        --color-retro-green: #00ff41;
+        --color-retro-pink: #ff00ff;
+        --color-retro-yellow: #fff600;
+        --color-retro-cyan: #00ffff;
+        --color-retro-red: #ff3333;
+        --color-retro-purple: #bd00ff;
+
+        --color-slate-950: #020617;
+        --color-slate-900: #0f172a;
+        --color-slate-800: #1e293b;
+        --color-slate-700: #334155;
+        --color-slate-600: #475569;
+        --color-slate-500: #64748b;
+
+        --color-shadow: rgba(0,0,0,1);
+        --color-shadow-lg: rgba(0,0,0,0.7);
       }
 
-      /* Authentic CRT Scanline Overlay */
+      .light-mode {
+        --color-black: #ffffff;
+        --color-white: #0f172a;
+        --retro-bg: #f8fafc;
+
+        /* Darker accents for visibility on white */
+        --color-retro-green: #15803d;
+        --color-retro-pink: #be185d;
+        --color-retro-yellow: #a16207;
+        --color-retro-cyan: #0e7490;
+        --color-retro-red: #b91c1c;
+        --color-retro-purple: #7e22ce;
+
+        --color-slate-950: #f1f5f9;
+        --color-slate-900: #e2e8f0;
+        --color-slate-800: #cbd5e1;
+        --color-slate-700: #94a3b8;
+        --color-slate-600: #64748b;
+        --color-slate-500: #475569;
+
+        --color-shadow: rgba(0,0,0,0.1);
+        --color-shadow-lg: rgba(0,0,0,0.05);
+      }
+
+      body {
+        background-color: var(--retro-bg);
+        color: var(--color-white);
+        font-family: "VT323", monospace;
+        overflow-x: hidden;
+        overscroll-behavior-y: none;
+      }
+
+      /* CRT Scanline Overlay */
       .scanlines {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-          to bottom,
-          rgba(255,255,255,0),
-          rgba(255,255,255,0) 50%,
-          rgba(0,0,0,0.2) 50%,
-          rgba(0,0,0,0.2)
-        );
+        inset: 0;
+        background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
         background-size: 100% 4px;
         z-index: 9999;
         pointer-events: none;
-        animation: scanline 0.2s linear infinite; /* Subtle flicker */
+        animation: scanline 0.2s linear infinite;
+        opacity: 0.3;
       }
-      
-      /* Vignette */
-      .vignette {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
-        z-index: 9998;
-        pointer-events: none;
-      }
+      .light-mode .scanlines { opacity: 0.05; }
 
       /* Retro Scrollbar */
-      ::-webkit-scrollbar {
-        width: 16px;
-        background: #000;
-      }
-      ::-webkit-scrollbar-track {
-        background: #111;
-        border-left: 2px solid #333;
-      }
+      ::-webkit-scrollbar { width: 12px; background: var(--color-slate-900); }
       ::-webkit-scrollbar-thumb {
-        background: #4ade80;
-        border: 2px solid #000;
-        box-shadow: inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.5);
+        background: var(--color-retro-green);
+        border: 2px solid var(--color-black);
+        box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4);
       }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #86efac;
-      }
+      ::-webkit-scrollbar-thumb:hover { background: var(--color-white); }
 
-      /* Utility */
-      .pixel-antialiased {
-        image-rendering: pixelated;
-        -webkit-font-smoothing: none;
-      }
-
-      .text-shadow-retro {
-        text-shadow: 2px 2px 0px #000;
-      }
+      .text-shadow-retro { text-shadow: 2px 2px 0px var(--color-shadow); }
+      .shadow-glow { box-shadow: 0 0 10px currentColor; }
       
-      .text-glow {
-        text-shadow: 0 0 5px currentColor;
-      }
-
-      /* Custom Range Slider for Settings */
       input[type=range] {
-        -webkit-appearance: none;
-        background: transparent;
+        -webkit-appearance: none; background: transparent;
       }
       input[type=range]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        height: 20px;
-        width: 10px;
-        background: #4ade80;
-        border: 2px solid #000;
-        cursor: pointer;
-        margin-top: -8px;
-        box-shadow: 2px 2px 0px #000;
+        -webkit-appearance: none; height: 16px; width: 8px;
+        background: var(--color-retro-cyan); border: 1px solid white;
+        cursor: pointer; margin-top: -6px; box-shadow: 0 0 5px var(--color-retro-cyan);
       }
       input[type=range]::-webkit-slider-runnable-track {
-        width: 100%;
-        height: 4px;
-        background: #333;
-        border: 1px solid #000;
+        width: 100%; height: 4px; background: var(--color-slate-700);
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+      }
+    }
+    </script>
+  <link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
     <div class="scanlines"></div>
-    <div class="vignette"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

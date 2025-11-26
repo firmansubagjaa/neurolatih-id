@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Cpu } from 'lucide-react';
 
 interface NeuralLoaderProps {
   message?: string;
@@ -11,21 +12,19 @@ export const NeuralLoader: React.FC<NeuralLoaderProps> = ({ message = "LOADING" 
   useEffect(() => {
     const interval = setInterval(() => {
         setDots(prev => prev.length < 3 ? prev + "." : "");
-    }, 500);
+    }, 400);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 animate-fade-in font-mono border-2 border-dashed border-slate-700 m-4">
-      <div className="text-retro-green text-4xl mb-4 animate-bounce font-pixel">
-        👾
-      </div>
-      <p className="text-xl text-retro-green uppercase tracking-widest text-center font-pixel animate-pulse">
+    <div className="flex flex-col items-center justify-center p-8 animate-fade-in font-mono m-4">
+      <Cpu className="w-12 h-12 text-retro-green animate-pulse mb-4" />
+      <p className="text-xl text-retro-green uppercase tracking-widest text-center font-pixel text-shadow-retro">
         {message}{dots}
       </p>
-      {/* 8-bit Loading Bar */}
-      <div className="w-48 h-6 border-2 border-white mt-6 p-1 bg-black">
-         <div className="h-full bg-retro-green animate-[scanline_2s_infinite]"></div>
+      {/* Retro Loading Bar */}
+      <div className="w-48 h-4 border-2 border-slate-700 mt-6 p-0.5 bg-black relative overflow-hidden">
+         <div className="h-full bg-retro-green animate-[scanline_1.5s_infinite]"></div>
       </div>
     </div>
   );

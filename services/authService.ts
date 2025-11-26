@@ -8,16 +8,64 @@ runSecurityUnitTests();
 const PROFILE_KEY = 'neuro_user_profile_v1';
 const HISTORY_KEY = 'neuro_game_history_v1';
 
-// --- ACHIEVEMENTS DATABASE ---
+// --- ACHIEVEMENTS DATABASE (Tiered & Psychological) ---
 export const ACHIEVEMENTS_DB: Achievement[] = [
-  { id: 'FIRST_LOGIN', title: 'NEURAL LINK ESTABLISHED', description: 'Bergabung dengan sistem.', icon: '🔌' },
-  { id: 'FIRST_WIN', title: 'HELLO WORLD', description: 'Menyelesaikan game pertama.', icon: '👋' },
-  { id: 'PERFECT_SCORE', title: 'SYNAPTIC PERFECTION', description: 'Akurasi 100% dalam satu sesi.', icon: '🎯' },
-  { id: 'STREAK_3', title: 'CONSISTENT MIND', description: 'Bermain 3 hari berturut-turut.', icon: '🔥' },
-  { id: 'STREAK_7', title: 'NEURAL MASTER', description: 'Bermain 7 hari berturut-turut.', icon: '👑' },
-  { id: 'SCORE_1000', title: 'OVERCLOCKING', description: 'Mencapai skor 1000+ dalam satu game.', icon: '⚡' },
-  { id: 'NIGHT_OWL', title: 'NIGHT OWL', description: 'Bermain di atas jam 10 malam.', icon: '🦉' },
+  // --- TIER 1: ONBOARDING (BRONZE) ---
+  { id: 'FIRST_LOGIN', title: 'NEURAL LINK', description: 'Bergabung dengan sistem.', icon: '🔌', tier: 'BRONZE' },
+  { id: 'FIRST_WIN', title: 'HELLO WORLD', description: 'Menyelesaikan game pertama.', icon: '👋', tier: 'BRONZE' },
+  { id: 'ROOKIE_SCORE', title: 'POTENTIAL DETECTED', description: 'Mencapai skor 500+.', icon: '🌱', tier: 'BRONZE' },
+
+  // --- TIER 2: CONSISTENCY (SILVER) ---
+  { id: 'STREAK_3', title: 'CONSISTENT MIND', description: 'Bermain 3 hari berturut-turut.', icon: '🔥', tier: 'SILVER' },
+  { id: 'ACCURACY_90', title: 'SHARP SHOOTER', description: 'Menyelesaikan game dengan akurasi > 90%.', icon: '🎯', tier: 'SILVER' },
+  { id: 'LEVEL_5', title: 'UPGRADE COMPLETE', description: 'Mencapai Level Profil 5.', icon: '⬆️', tier: 'SILVER' },
+
+  // --- TIER 3: MASTERY (GOLD) ---
+  { id: 'STREAK_7', title: 'NEURAL MASTER', description: 'Bermain 7 hari berturut-turut.', icon: '👑', tier: 'GOLD' },
+  { id: 'SCORE_1000', title: 'OVERCLOCKING', description: 'Mencapai skor 1000+ dalam satu game.', icon: '⚡', tier: 'GOLD' },
+  { id: 'PERFECT_HARD', title: 'GODLIKE', description: 'Sempurna (100%) di mode MAHIR (Advanced).', icon: '💎', tier: 'GOLD' },
+  
+  // --- TIER 4: SPECIALIST (PLATINUM) ---
+  { id: 'MEM_WIZARD', title: 'HIPPOCAMPUS HACKER', description: 'Skor 800+ di Memory Game.', icon: '🧠', tier: 'PLATINUM' },
+  { id: 'LOGIC_LORD', title: 'PREFRONTAL POWER', description: 'Skor 800+ di Logic Sequence.', icon: '📐', tier: 'PLATINUM' },
+  { id: 'SPEED_DEMON', title: 'SYNAPTIC SPEED', description: 'Math Rush Advanced: Akurasi 100%.', icon: '🚀', tier: 'PLATINUM' },
+
+  // --- HIDDEN / EASTER EGGS ---
+  { id: 'NIGHT_OWL', title: 'NIGHT OWL', description: 'Bermain di atas jam 10 malam.', icon: '🦉', tier: 'SILVER', isSecret: true },
+  { id: 'EARLY_BIRD', title: 'EARLY BIRD', description: 'Bermain sebelum jam 6 pagi.', icon: '🌅', tier: 'SILVER', isSecret: true },
+  { id: 'PERSISTENCE', title: 'NEVER GIVE UP', description: 'Gagal (Game Over) 3x berturut-turut tapi main lagi.', icon: '❤️', tier: 'BRONZE', isSecret: true },
 ];
+
+// --- XP & RANK SYSTEM UTILITIES ---
+
+export const getRankTitle = (level: number): string => {
+  if (level <= 3) return "NEURAL INITIATE";
+  if (level <= 7) return "SYNAPSE SEEKER";
+  if (level <= 12) return "CORTEX COMMANDER";
+  if (level <= 18) return "MIND ARCHITECT";
+  if (level <= 25) return "COGNITIVE ELITE";
+  if (level <= 35) return "NEURO-TRANSCENDENT";
+  return "SINGULARITY";
+};
+
+// Quadratic Formula: XP required increases with level
+// XP = (Level * 10)^2. 
+// Lv 1 = 0 XP
+// Lv 2 = 100 XP (Total)
+// Lv 3 = 400 XP (Total)
+// Lv 10 = 10,000 XP
+export const calculateLevelFromXP = (xp: number): number => {
+  if (xp < 100) return 1;
+  return Math.floor(Math.sqrt(xp) / 10) + 1;
+};
+
+export const calculateXPForNextLevel = (level: number): number => {
+  return Math.pow(level * 10, 2);
+};
+
+export const calculateXPForCurrentLevel = (level: number): number => {
+  return Math.pow((level - 1) * 10, 2);
+};
 
 // --- HELPER: GET LOCAL DATE (YYYY-MM-DD) ---
 const getLocalDate = (): string => {
@@ -28,8 +76,12 @@ const getLocalDate = (): string => {
 
 // --- STORAGE WRAPPERS ---
 const saveSecure = (key: string, data: any) => {
-  const encrypted = encryptData(data);
-  localStorage.setItem(key, encrypted);
+  try {
+    const encrypted = encryptData(data);
+    localStorage.setItem(key, encrypted);
+  } catch (e) {
+    console.error("Storage Save Failed", e);
+  }
 };
 
 const loadSecure = <T>(key: string): T | null => {
@@ -74,20 +126,19 @@ export const registerUser = (username: string): UserProfile => {
   return newProfile;
 };
 
+// --- PERSISTENCE LOGIC ---
 export const saveGameResult = (result: GameResult): { updatedProfile: UserProfile, result: GameResult } => {
   let profile = getUserProfile();
   
   // Safety check: If profile is null (e.g., due to tamper reset), we might need to re-init or throw
   if (!profile) {
-      // Fallback for extreme edge case: Create temp profile or throw
-      // Ideally app should redirect to login, but here we throw to let UI handle it
       throw new Error("PROFILE_CORRUPTED");
   }
 
   const today = getLocalDate();
   const history = getGameHistory();
   
-  // 1. STREAK LOGIC (Time Complexity: O(1))
+  // 1. STREAK LOGIC
   const lastPlayed = profile.lastPlayedDate;
   let newStreak = profile.currentStreak;
   
@@ -104,20 +155,24 @@ export const saveGameResult = (result: GameResult): { updatedProfile: UserProfil
      }
   }
 
-  // 2. BEST SCORE LOGIC (Time Complexity: O(1) - Map Lookup)
+  // 2. BEST SCORE PERSISTENCE LOGIC
+  if (!profile.bestScores) profile.bestScores = {};
+
   const scoreKey = `${result.gameMode}_${result.difficulty}`;
   const currentBest = profile.bestScores[scoreKey] || 0;
   const isNewBest = result.score > currentBest;
   
   const newBestScores = { ...profile.bestScores };
-  if (isNewBest) newBestScores[scoreKey] = result.score;
+  if (isNewBest) {
+      newBestScores[scoreKey] = result.score;
+  }
 
-  // 3. XP & LEVEL LOGIC
+  // 3. XP & LEVEL LOGIC (UPDATED QUADRATIC)
   const xpGained = result.score;
   const newTotalXp = profile.totalXp + xpGained;
-  const newLevel = Math.floor(newTotalXp / 2000) + 1;
+  const newLevel = calculateLevelFromXP(newTotalXp);
 
-  // 4. ACHIEVEMENT LOGIC (Time Complexity: O(M) where M is num achievements)
+  // 4. ACHIEVEMENT LOGIC (Expanded)
   const newUnlockedIds: string[] = [];
   const currentUnlocked = new Set(profile.unlockedAchievements);
 
@@ -128,14 +183,41 @@ export const saveGameResult = (result: GameResult): { updatedProfile: UserProfil
       }
   };
 
+  // General Checks
   checkUnlock('FIRST_WIN', true);
-  checkUnlock('PERFECT_SCORE', result.accuracy === 100);
+  checkUnlock('ROOKIE_SCORE', result.score >= 500);
   checkUnlock('SCORE_1000', result.score >= 1000);
+  checkUnlock('ACCURACY_90', result.accuracy >= 90);
+  checkUnlock('PERFECT_HARD', result.accuracy === 100 && result.difficulty === Difficulty.ADVANCED);
+  
+  // Streak Checks
   checkUnlock('STREAK_3', newStreak >= 3);
   checkUnlock('STREAK_7', newStreak >= 7);
   
+  // Level Checks
+  checkUnlock('LEVEL_5', newLevel >= 5);
+
+  // Specialist Checks
+  if (result.gameMode === GameMode.MEMORY) checkUnlock('MEM_WIZARD', result.score >= 800);
+  if (result.gameMode === GameMode.SEQUENCE) checkUnlock('LOGIC_LORD', result.score >= 800);
+  if (result.gameMode === GameMode.MATH_RUSH && result.difficulty === Difficulty.ADVANCED) checkUnlock('SPEED_DEMON', result.accuracy === 100);
+
+  // Secret Checks
   const hour = new Date().getHours();
   checkUnlock('NIGHT_OWL', hour >= 22 || hour < 4);
+  checkUnlock('EARLY_BIRD', hour >= 5 && hour < 8);
+
+  // Persistence Check (Hidden) - Requires history analysis
+  // Logic: Check if last 2 games were failures (low score/accuracy) and this one exists
+  if (history.length >= 2) {
+      const g1 = history[history.length - 1];
+      const g2 = history[history.length - 2];
+      // Define "Failure" as very low accuracy/score
+      const isFail = (g: GameResult) => g.accuracy < 30; 
+      if (isFail(g1) && isFail(g2)) {
+          checkUnlock('PERSISTENCE', true);
+      }
+  }
 
   // 5. SAVE UPDATES
   const updatedProfile: UserProfile = {
@@ -150,7 +232,6 @@ export const saveGameResult = (result: GameResult): { updatedProfile: UserProfil
 
   saveSecure(PROFILE_KEY, updatedProfile);
 
-  // Save History
   const resultWithMeta: GameResult = {
       ...result,
       timestamp: Date.now(),
@@ -174,7 +255,6 @@ export const getWeeklyStats = (): DailyStat[] => {
   const stats: DailyStat[] = [];
   const today = new Date();
   
-  // Last 7 days
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);

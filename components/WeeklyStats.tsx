@@ -19,17 +19,15 @@ export const WeeklyStats: React.FC<WeeklyStatsProps> = () => {
   const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
 
   const handleInteraction = (idx: number) => {
-    if (activeTooltip === idx) {
-      setActiveTooltip(null);
-    } else {
-      setActiveTooltip(idx);
-    }
+    setActiveTooltip(activeTooltip === idx ? null : idx);
   };
 
   return (
     <div className="w-full h-full flex flex-col p-4">
-      {/* Header Stats */}
-      <div className="flex justify-between items-start mb-4 md:mb-6 border-b-2 border-slate-700 pb-4">
+      {/* Background Grid */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+      
+      <div className="flex justify-between items-start mb-4 md:mb-6 border-b-2 border-slate-700 pb-4 relative z-10">
         <div className="flex items-center gap-3">
             <div className="p-2 bg-slate-800 border border-slate-600 text-retro-cyan">
                 <BarChart3 className="w-6 h-6" />
@@ -47,38 +45,23 @@ export const WeeklyStats: React.FC<WeeklyStatsProps> = () => {
         </div>
       </div>
 
-      {/* Chart Area */}
-      <div className="flex-1 flex items-end justify-between gap-2 md:gap-4 px-2 h-full min-h-[120px] pb-6">
+      <div className="flex-1 flex items-end justify-between gap-2 md:gap-4 px-2 h-full min-h-[120px] pb-6 relative z-10">
         {stats.map((stat, idx) => {
           const heightPercent = (stat.score / maxScore) * 100;
           const visualHeight = Math.max(heightPercent, 5); 
-          
           const dayName = new Date(stat.date).toLocaleDateString('id-ID', { weekday: 'narrow' });
           const isToday = idx === stats.length - 1;
           const hasScore = stat.score > 0;
-
           let barColorClass = "bg-slate-800 border-slate-700"; 
-          
           if (hasScore) {
-              if (isToday) {
-                  barColorClass = "bg-retro-green border-white shadow-[0_0_15px_rgba(74,222,128,0.4)]";
-              } else {
-                  barColorClass = "bg-emerald-600 border-emerald-400 opacity-80 hover:opacity-100";
-              }
-          } else if (isToday) {
-              barColorClass = "bg-slate-700 border-retro-green/50 animate-pulse";
-          }
+              if (isToday) barColorClass = "bg-retro-green border-white shadow-[0_0_15px_rgba(74,222,128,0.4)]";
+              else barColorClass = "bg-emerald-600 border-emerald-400 opacity-80 hover:opacity-100";
+          } else if (isToday) barColorClass = "bg-slate-700 border-retro-green/50 animate-pulse";
 
           return (
-            <div 
-                key={idx} 
-                className="flex flex-col items-center gap-2 w-full h-full justify-end relative cursor-pointer md:cursor-default"
-                onClick={() => handleInteraction(idx)}
-                onMouseEnter={() => setActiveTooltip(idx)}
-                onMouseLeave={() => setActiveTooltip(null)}
+            <div key={idx} className="flex flex-col items-center gap-2 w-full h-full justify-end relative cursor-pointer group"
+                onClick={() => handleInteraction(idx)} onMouseEnter={() => setActiveTooltip(idx)} onMouseLeave={() => setActiveTooltip(null)}
             >
-              
-              {/* Tooltip */}
               {activeTooltip === idx && (
                   <div className="absolute bottom-full mb-2 z-20 pointer-events-none animate-fade-in">
                       <div className="bg-black border-2 border-white px-2 py-1 text-[10px] font-pixel text-white shadow-retro whitespace-nowrap text-center">
@@ -87,21 +70,10 @@ export const WeeklyStats: React.FC<WeeklyStatsProps> = () => {
                       </div>
                   </div>
               )}
-
-              {/* The Bar */}
-              <div 
-                 className={`w-full max-w-[40px] border-t-2 border-x-2 transition-all duration-1000 ease-out relative ${barColorClass}`}
-                 style={{ height: `${visualHeight}%` }}
-              >
-                  {hasScore && (
-                      <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.1)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.1)_50%,rgba(0,0,0,0.1)_75%,transparent_75%,transparent)] bg-[length:4px_4px]"></div>
-                  )}
+              <div className={`w-full max-w-[40px] border-t-2 border-x-2 transition-all duration-1000 ease-out relative ${barColorClass}`} style={{ height: `${visualHeight}%` }}>
+                  {hasScore && <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.1)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.1)_50%,rgba(0,0,0,0.1)_75%,transparent_75%,transparent)] bg-[length:4px_4px]"></div>}
               </div>
-              
-              {/* Label */}
-              <span className={`text-[10px] font-bold font-pixel uppercase ${isToday ? 'text-retro-green' : 'text-slate-500'}`}>
-                {dayName}
-              </span>
+              <span className={`text-[10px] font-bold font-pixel uppercase ${isToday ? 'text-retro-green' : 'text-slate-500'}`}>{dayName}</span>
             </div>
           );
         })}
